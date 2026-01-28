@@ -6,10 +6,13 @@ import com.itu.framework.view.*;
 @Controller("/")
 public class HelloWorldController {
     @GET
-    @UrlMapping
+    @UrlMapping("/")
+    @Json
     public ModelView sayHello() {
-        ModelView mv = new ModelView("hello");
+        ModelView mv = new ModelView();
+        mv.addObject("message", "Hello from Heroku!");
         mv.addObject("name", "Faniry");
+        mv.addObject("status", "running");
         return mv;
     }
 }

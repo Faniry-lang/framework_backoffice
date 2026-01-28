@@ -2,24 +2,40 @@ package itu.framework.backoffice;
 
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHolder;
+import com.itu.framework.FrontServlet;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
 public class Main {
     public static void main(String[] args) throws Exception {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        int port = Integer.parseInt(System.getenv("PORT"));
+        System.out.println("Starting application...");
+
+        // Get port from environment variable (required for Heroku)
+        int port = 8080; // default port for local development
+        String portEnv = System.getenv("PORT");
+        if (portEnv != null && !portEnv.trim().isEmpty()) {
+            port = Integer.parseInt(portEnv);
+        }
+        System.out.println("Using port: " + port);
 
         Server server = new Server(port);
 
-        ServletContextHandler context =
-                new ServletContextHandler(ServletContextHandler.SESSIONS);
-
+        // Use ServletContextHandler and let the framework's FrontServlet handle everything
+        ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
         context.setContextPath("/");
 
+        // Configure the FrontServlet from the framework - it will handle controller scanning
+        ServletHolder frontServletHolder = new ServletHolder(new FrontServlet());
+        frontServletHolder.setInitParameter("controller-package", "itu.framework.backoffice.controllers");
+        frontServletHolder.setInitParameter("view-prefix", "/WEB-INF/pages/");
+        frontServletHolder.setInitParameter("view-suffix", ".jsp");
+
+        context.addServlet(frontServletHolder, "/");
+
         server.setHandler(context);
+
+        System.out.println("Starting server...");
         server.start();
+        System.out.println("Server started successfully on port " + port);
         server.join();
     }
 }

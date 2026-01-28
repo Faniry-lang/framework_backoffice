@@ -26,6 +26,8 @@
             <groupId>com.itu.framework</groupId>
             <artifactId>framework</artifactId>
             <version>1.0-SNAPSHOT</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/libs/framework-1.0-SNAPSHOT.jar</systemPath>
         </dependency>
 
         <!-- ========================= -->
@@ -92,6 +94,31 @@
 
         <plugins>
 
+            <!-- xml -->
+            <!-- maven-install-plugin : exécution en phase validate -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-install-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>install-external-framework</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>install-file</goal>
+                        </goals>
+                        <configuration>
+                            <groupId>com.itu.framework</groupId>
+                            <artifactId>framework</artifactId>
+                            <version>1.0-SNAPSHOT</version>
+                            <packaging>jar</packaging>
+                            <file>${project.basedir}/libs/framework-1.0-SNAPSHOT.jar</file>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+
             <!-- ========================= -->
             <!-- Compiler -->
             <!-- ========================= -->
@@ -118,29 +145,6 @@
                         </manifest>
                     </archive>
                 </configuration>
-            </plugin>
-
-            <!-- xml -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-install-plugin</artifactId>
-                <version>3.1.0</version>
-                <executions>
-                    <execution>
-                        <id>install-external-framework</id>
-                        <phase>initialize</phase>
-                        <goals>
-                            <goal>install-file</goal>
-                        </goals>
-                        <configuration>
-                            <groupId>com.itu.framework</groupId>
-                            <artifactId>framework</artifactId>
-                            <version>1.0-SNAPSHOT</version>
-                            <packaging>jar</packaging>
-                            <file>${project.basedir}/libs/framework-1.0-SNAPSHOT.jar</file>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
 
 

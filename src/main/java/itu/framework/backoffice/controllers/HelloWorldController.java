@@ -5,11 +5,9 @@ import com.itu.framework.view.*;
 
 @Controller("/")
 public class HelloWorldController {
-    @GET
-    @UrlMapping
+    @GetMapping
     public ModelView sayHello() {
         ModelView mv = new ModelView("hello");
-        mv.addObject("name", "Faniry");
         return mv;
     }
 }

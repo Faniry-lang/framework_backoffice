@@ -1,1 +1,1 @@
-web: java -Dserver.port=$PORT -jar target/backoffice.jar
+web: java  -jar target/backoffice.jar --port=$PORT

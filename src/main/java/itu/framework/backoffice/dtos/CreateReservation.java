@@ -6,7 +6,7 @@ public class CreateReservation {
     Integer nbPassager;
     String idClient;
     Integer idHotel;
-    LocalDateTime dateHeureArrivee;
+    String dateHeureArrivee;
 
     public Integer getNbPassager() {
         return nbPassager;
@@ -32,11 +32,11 @@ public class CreateReservation {
         this.idHotel = idHotel;
     }
 
-    public LocalDateTime getDateHeureArrivee() {
+    public String getDateHeureArrivee() {
         return dateHeureArrivee;
     }
 
-    public void setDateHeureArrivee(LocalDateTime dateHeureArrivee) {
+    public void setDateHeureArrivee(String dateHeureArrivee) {
         this.dateHeureArrivee = dateHeureArrivee;
     }
 }

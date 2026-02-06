@@ -1,5 +1,6 @@
 package itu.framework.backoffice.controllers;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.itu.framework.annotations.Controller;
 import com.itu.framework.annotations.GetMapping;
 import com.itu.framework.annotations.PostMapping;
@@ -10,6 +11,8 @@ import itu.framework.backoffice.entities.Hotel;
 import itu.framework.backoffice.entities.Reservation;
 import legacy.query.QueryManager;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Controller("/api/reservation")
@@ -20,13 +23,15 @@ public class ReservationController {
         reservation.setNbPassager(createReservation.getNbPassager());
         reservation.setIdClient(createReservation.getIdClient());
         reservation.setIdHotel(createReservation.getIdHotel());
-        reservation.setDateHeureArrivee(createReservation.getDateHeureArrivee());
+        reservation.setDateHeureArrivee(LocalDateTime.parse(createReservation.getDateHeureArrivee()));
+
         try {
-           reservation.save();
-           ModelView successView = new ModelView("sucess");
+           reservation = (Reservation) reservation.save();
+           ModelView successView = new ModelView("success");
            successView.addObject("reservation", reservation);
            return successView;
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             ModelView errorView = new ModelView("error");
             errorView.addObject("error-message", e.getMessage());
             return errorView;
@@ -39,5 +44,12 @@ public class ReservationController {
         ModelView formView = new ModelView("reservation-form");
         formView.addObject("hotels", hotelList);
         return formView;
+    }
+
+    @GetMapping
+    public String getReservationFilteredByDate(@RequestParam("date_reservation") String date) throws Exception {
+        LocalDate dateObj = LocalDate.parse(date);
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.writeValueAsString(Reservation.findByDate(dateObj));
     }
 }

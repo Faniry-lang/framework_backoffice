@@ -1,12 +1,20 @@
 package itu.framework.backoffice.entities;
 
+import itu.framework.backoffice.dtos.ReservationDTO;
 import legacy.annotations.Column;
 import legacy.annotations.Entity;
 import legacy.annotations.ForeignKey;
 import legacy.annotations.Id;
+import legacy.query.Comparator;
+import legacy.query.Filter;
+import legacy.query.QueryManager;
 import legacy.schema.BaseEntity;
 
+import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity(tableName = "reservation")
 public class Reservation extends BaseEntity {
@@ -65,5 +73,30 @@ public class Reservation extends BaseEntity {
 
     public void setDateHeureArrivee(LocalDateTime dateHeureArrivee) {
         this.dateHeureArrivee = dateHeureArrivee;
+    }
+
+    public ReservationDTO toDto() throws Exception {
+        ReservationDTO dto =  new ReservationDTO();
+        dto.setId_client(this.getIdClient());
+        dto.setNb_passager(this.getNbPassager());
+        dto.setNom_hotel(((Hotel) this.getForeignKey("id_hotel")).getNom());
+        dto.setDate_reservation(Timestamp.valueOf(this.getDateHeureArrivee()));
+        return dto;
+    }
+
+    public static List<ReservationDTO> findByDate(LocalDate date) throws Exception {
+        LocalDateTime endOfTheDay = date.atStartOfDay()
+        LocalDateTime startOfTheDay = date;
+        List<Filter> filters = new ArrayList<>();
+        if(date != null) {
+            filters.add(new Filter("date_heure_arrivee", Comparator.LESS_THAN, endOfTheDay));
+            filters.add(new Filter("date_heure_arrivee", Comparator.GREATER_THAN, startOfTheDay));
+        }
+        List<Reservation> reservations = Reservation.filter(Reservation.class, QueryManager.get_instance(), filters.toArray(new Filter[0]));
+        List<ReservationDTO> dtos = new ArrayList<>();
+        for(Reservation reservation: reservations) {
+            dtos.add(reservation.toDto());
+        }
+        return dtos;
     }
 }

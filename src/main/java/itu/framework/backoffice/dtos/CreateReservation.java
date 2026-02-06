@@ -1,39 +1,12 @@
-package itu.framework.backoffice.entities;
-
-import legacy.annotations.Column;
-import legacy.annotations.Entity;
-import legacy.annotations.ForeignKey;
-import legacy.annotations.Id;
-import legacy.schema.BaseEntity;
+package itu.framework.backoffice.dtos;
 
 import java.time.LocalDateTime;
 
-@Entity(tableName = "reservation")
-public class Reservation extends BaseEntity {
-    @Id
-    @Column
-    Integer id;
-
-    @Column(name = "nb_passager")
+public class CreateReservation {
     Integer nbPassager;
-
-    @Column(name = "id_client")
     String idClient;
-
-    @Column(name = "id_hotel")
-    @ForeignKey(mappedBy = "hotel", entity = Hotel.class)
     Integer idHotel;
-
-    @Column(name = "date_heure_arrivee")
     LocalDateTime dateHeureArrivee;
-
-    public Integer getId() {
-        return id;
-    }
-
-    public void setId(Integer id) {
-        this.id = id;
-    }
 
     public Integer getNbPassager() {
         return nbPassager;

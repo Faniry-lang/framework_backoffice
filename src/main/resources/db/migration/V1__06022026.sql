@@ -10,7 +10,7 @@ CREATE TABLE reservation (
                              nb_passager INT,
                              id_client VARCHAR(5),
                              id_hotel INT,
-                            date_reservation TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                            date_heure_arrivee TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                              CONSTRAINT fk_reservation_hotel
                                  FOREIGN KEY (id_hotel)
                                      REFERENCES hotel(id)

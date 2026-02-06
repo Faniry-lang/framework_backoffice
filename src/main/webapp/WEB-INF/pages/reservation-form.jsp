@@ -10,7 +10,14 @@
 <body>
 
 <h2>Nouvelle réservation</h2>
-
+<%
+    String message = (String) request.getAttribute("message");
+    if(message != null) {
+%>
+    <h1><%= message %></h1>
+<%
+    }
+%>
 <form method="post" action="/api/reservation/save">
 
     <label>Client ID :</label><br>

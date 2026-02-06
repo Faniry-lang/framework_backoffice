@@ -1,12 +1,10 @@
 package itu.framework.backoffice.controllers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.itu.framework.annotations.Controller;
-import com.itu.framework.annotations.GetMapping;
-import com.itu.framework.annotations.PostMapping;
-import com.itu.framework.annotations.RequestParam;
+import com.itu.framework.annotations.*;
 import com.itu.framework.view.ModelView;
 import itu.framework.backoffice.dtos.CreateReservation;
+import itu.framework.backoffice.dtos.ReservationDTO;
 import itu.framework.backoffice.entities.Hotel;
 import itu.framework.backoffice.entities.Reservation;
 import legacy.query.QueryManager;
@@ -18,23 +16,23 @@ import java.util.List;
 @Controller("/api/reservation")
 public class ReservationController {
     @PostMapping("/save")
-    public ModelView saveReservation(CreateReservation createReservation) {
-        Reservation reservation = new Reservation();
-        reservation.setNbPassager(createReservation.getNbPassager());
-        reservation.setIdClient(createReservation.getIdClient());
-        reservation.setIdHotel(createReservation.getIdHotel());
-        reservation.setDateHeureArrivee(LocalDateTime.parse(createReservation.getDateHeureArrivee()));
-
+    public ModelView saveReservation(CreateReservation createReservation) throws Exception {
+        List<Hotel> hotelList = Hotel.findAll(Hotel.class, QueryManager.get_instance());
         try {
-           reservation = (Reservation) reservation.save();
-           ModelView successView = new ModelView("success");
-           successView.addObject("reservation", reservation);
-           return successView;
+            Reservation reservation = new Reservation();
+            reservation.setNbPassager(createReservation.getNbPassager());
+            reservation.setIdClient(createReservation.getIdClient());
+            reservation.setIdHotel(createReservation.getIdHotel());
+            reservation.setDateHeureArrivee(LocalDateTime.parse(createReservation.getDateHeureArrivee()));
+            ModelView formView = new ModelView("reservation-form");
+            formView.addObject("hotels", hotelList);
+            formView.addObject("message", "Succès!");
+            return formView;
         } catch (Exception e) {
-            System.out.println(e.getMessage());
-            ModelView errorView = new ModelView("error");
-            errorView.addObject("error-message", e.getMessage());
-            return errorView;
+            ModelView formView = new ModelView("reservation-form");
+            formView.addObject("hotels", hotelList);
+            formView.addObject("message", "Erreur: "+e.getMessage());
+            return formView;
         }
     }
 
@@ -47,9 +45,13 @@ public class ReservationController {
     }
 
     @GetMapping
-    public String getReservationFilteredByDate(@RequestParam("date_reservation") String date) throws Exception {
-        LocalDate dateObj = LocalDate.parse(date);
-        ObjectMapper mapper = new ObjectMapper();
-        return mapper.writeValueAsString(Reservation.findByDate(dateObj));
+    @Json
+    public List<ReservationDTO> getReservationFilteredByDate(@RequestParam("date_reservation") String date) throws Exception {
+
+        LocalDate dateObj = null;
+        if(date != null) {
+            dateObj = LocalDate.parse(date);
+        }
+        return Reservation.findByDate(dateObj);
     }
 }

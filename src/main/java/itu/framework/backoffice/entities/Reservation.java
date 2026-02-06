@@ -80,15 +80,15 @@ public class Reservation extends BaseEntity {
         dto.setId_client(this.getIdClient());
         dto.setNb_passager(this.getNbPassager());
         dto.setNom_hotel(((Hotel) this.getForeignKey("id_hotel")).getNom());
-        dto.setDate_reservation(Timestamp.valueOf(this.getDateHeureArrivee()));
+        dto.setDate_reservation(this.getDateHeureArrivee());
         return dto;
     }
 
     public static List<ReservationDTO> findByDate(LocalDate date) throws Exception {
-        LocalDateTime endOfTheDay = date.atStartOfDay()
-        LocalDateTime startOfTheDay = date;
         List<Filter> filters = new ArrayList<>();
         if(date != null) {
+            LocalDateTime endOfTheDay = date.atStartOfDay().plusHours(24);
+            LocalDateTime startOfTheDay = date.atStartOfDay();
             filters.add(new Filter("date_heure_arrivee", Comparator.LESS_THAN, endOfTheDay));
             filters.add(new Filter("date_heure_arrivee", Comparator.GREATER_THAN, startOfTheDay));
         }

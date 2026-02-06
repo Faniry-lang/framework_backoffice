@@ -80,7 +80,7 @@ public class Reservation extends BaseEntity {
         dto.setId_client(this.getIdClient());
         dto.setNb_passager(this.getNbPassager());
         dto.setNom_hotel(((Hotel) this.getForeignKey("id_hotel")).getNom());
-        dto.setDate_reservation(this.getDateHeureArrivee());
+        dto.setDate_reservation(this.getDateHeureArrivee().toString());
         return dto;
     }
 

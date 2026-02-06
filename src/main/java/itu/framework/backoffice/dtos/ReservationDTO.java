@@ -8,7 +8,7 @@ public class ReservationDTO implements Serializable {
     Integer nb_passager;
     String id_client;
     String nom_hotel;
-    LocalDateTime date_reservation;
+    String date_reservation;
 
     public Integer getNb_passager() {
         return nb_passager;
@@ -34,11 +34,11 @@ public class ReservationDTO implements Serializable {
         this.nom_hotel = nom_hotel;
     }
 
-    public LocalDateTime getDate_reservation() {
+    public String getDate_reservation() {
         return date_reservation;
     }
 
-    public void setDate_reservation(LocalDateTime date_reservation) {
+    public void setDate_reservation(String date_reservation) {
         this.date_reservation = date_reservation;
     }
 }

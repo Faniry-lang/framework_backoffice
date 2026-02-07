@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-@Controller("/api/reservation")
+@Controller("/api/reservations")
 public class ReservationController {
     @PostMapping("/save")
     public ModelView saveReservation(CreateReservation createReservation) throws Exception {
@@ -24,16 +24,17 @@ public class ReservationController {
             reservation.setIdClient(createReservation.getIdClient());
             reservation.setIdHotel(createReservation.getIdHotel());
             reservation.setDateHeureArrivee(LocalDateTime.parse(createReservation.getDateHeureArrivee()));
-            ModelView formView = new ModelView("reservation-form");
-            formView.addObject("hotels", hotelList);
-            formView.addObject("message", "Succès!");
-            return formView;
+            reservation.save();
         } catch (Exception e) {
             ModelView formView = new ModelView("reservation-form");
             formView.addObject("hotels", hotelList);
             formView.addObject("message", "Erreur: "+e.getMessage());
             return formView;
         }
+        ModelView formView = new ModelView("reservation-form");
+        formView.addObject("hotels", hotelList);
+        formView.addObject("message", "Succès! ");
+        return formView;
     }
 
     @GetMapping("/form")

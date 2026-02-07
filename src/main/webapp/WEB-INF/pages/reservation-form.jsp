@@ -18,7 +18,7 @@
 <%
     }
 %>
-<form method="post" action="/api/reservation/save">
+<form method="post" action="/api/reservations/save">
 
     <label>Client ID :</label><br>
     <input type="text" name="idClient" required><br><br>

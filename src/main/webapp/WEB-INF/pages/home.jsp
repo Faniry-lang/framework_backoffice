@@ -109,6 +109,6 @@
         </main>
     </div>
 
-    <script src="${pageContext.request.contextPath}/WEB-INF/assets/js/templatemo-crypto-script.js"></script>
+    <script src="${pageContext.request.contextPath}/assets/js/templatemo-crypto-script.js"></script>
 </body>
 </html>

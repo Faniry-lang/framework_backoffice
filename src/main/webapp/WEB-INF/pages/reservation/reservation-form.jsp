@@ -19,6 +19,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="${ctx}/assets/css/templatemo-crypto-style.css">
     <link rel="stylesheet" href="${ctx}/assets/css/templatemo-crypto-pages.css">
+
 </head>
 <body>
     <button class="mobile-menu-toggle" id="mobileMenuToggle">

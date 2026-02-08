@@ -8,8 +8,9 @@ public class EntityCodeGenerator {
         String outputFolderPath = "src/main/java";
         String packageName = "itu.framework.backoffice.entities";
 
-        EntityGenerator.generateEntity("hotel", "TABLE", outputFolderPath, packageName);
-        EntityGenerator.generateEntity("reservation", "TABLE", outputFolderPath, packageName);
+        // generation auto hoan table na view
+        // uncomment and run this code
+        // EntityGenerator.generateEntity("reservation", "TABLE", outputFolderPath, packageName);
     }
 }
 

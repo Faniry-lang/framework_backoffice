@@ -4,10 +4,10 @@ import com.itu.framework.annotations.*;
 import com.itu.framework.view.*;
 
 @Controller("/")
-public class HelloWorldController {
+public class HomeController {
     @GetMapping
-    public ModelView sayHello() {
-        ModelView mv = new ModelView("hello");
+    public ModelView showHomePage() {
+        ModelView mv = new ModelView("home");
         return mv;
     }
 }

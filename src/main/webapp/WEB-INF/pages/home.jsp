@@ -8,8 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets/css/templatemo-crypto-style.css">
-    <link rel="stylesheet" href="/assets/css/templatemo-crypto-pages.css">
+    <link rel="stylesheet" href="${ctx}/assets/css/templatemo-crypto-style.css">
+    <link rel="stylesheet" href="${ctx}/assets/css/templatemo-crypto-pages.css">
 </head>
 <body>
     <button class="mobile-menu-toggle" id="mobileMenuToggle">
@@ -109,6 +109,6 @@
         </main>
     </div>
 
-    <script src="${pageContext.request.contextPath}/static/assets/js/templatemo-crypto-script.js"></script>
+    <script src="${pageContext.request.contextPath}/WEB-INF/assets/js/templatemo-crypto-script.js"></script>
 </body>
 </html>

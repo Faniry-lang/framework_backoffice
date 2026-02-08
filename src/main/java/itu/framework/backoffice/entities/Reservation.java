@@ -1,16 +1,12 @@
 package itu.framework.backoffice.entities;
 
 import itu.framework.backoffice.dtos.ReservationDTO;
-import legacy.annotations.Column;
-import legacy.annotations.Entity;
-import legacy.annotations.ForeignKey;
-import legacy.annotations.Id;
+import legacy.annotations.*;
 import legacy.query.Comparator;
-import legacy.query.Filter;
-import legacy.query.QueryManager;
+import legacy.query.FilterSet;
 import legacy.schema.BaseEntity;
+import legacy.strategy.GeneratedAfterPersistence;
 
-import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -20,6 +16,7 @@ import java.util.List;
 public class Reservation extends BaseEntity {
     @Id
     @Column
+    @Generated(strategy = GeneratedAfterPersistence.class)
     Integer id;
 
     @Column(name = "nb_passager")
@@ -85,14 +82,14 @@ public class Reservation extends BaseEntity {
     }
 
     public static List<ReservationDTO> findByDate(LocalDate date) throws Exception {
-        List<Filter> filters = new ArrayList<>();
+        FilterSet filters = new FilterSet();
         if(date != null) {
             LocalDateTime endOfTheDay = date.atStartOfDay().plusHours(24);
             LocalDateTime startOfTheDay = date.atStartOfDay();
-            filters.add(new Filter("date_heure_arrivee", Comparator.LESS_THAN, endOfTheDay));
-            filters.add(new Filter("date_heure_arrivee", Comparator.GREATER_THAN, startOfTheDay));
+            filters.add("date_heure_arrivee", Comparator.LESS_THAN, endOfTheDay);
+            filters.add("date_heure_arrivee", Comparator.GREATER_THAN, startOfTheDay);
         }
-        List<Reservation> reservations = Reservation.filter(Reservation.class, QueryManager.get_instance(), filters.toArray(new Filter[0]));
+        List<Reservation> reservations = Reservation.filter(Reservation.class, filters);
         List<ReservationDTO> dtos = new ArrayList<>();
         for(Reservation reservation: reservations) {
             dtos.add(reservation.toDto());

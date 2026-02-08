@@ -10,4 +10,10 @@ public class HomeController {
         ModelView mv = new ModelView("home");
         return mv;
     }
+
+    @GetMapping("/health")
+    @Json
+    public String healthCheck() {
+        return "Ok";
+    }
 }

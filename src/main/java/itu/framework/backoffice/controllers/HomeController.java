@@ -16,4 +16,31 @@ public class HomeController {
     public String healthCheck() {
         return "Ok";
     }
+
+    @GetMapping("/test")
+    @Json
+    public String test(@RequestBody RequestDto requestDto) {
+        return "Message recu: "+requestDto.getMessage()+" avec le token: "+requestDto.getToken();
+    }
+    
+    private static class RequestDto {
+        String token;
+        String message;
+
+        public String getToken() {
+            return token;
+        }
+
+        public void setToken(String token) {
+            this.token = token;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+        }
+    }
 }

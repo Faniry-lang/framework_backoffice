@@ -1,0 +1,19 @@
+vehicule
+    id, ref, nbr_place, type_carburant('D','EL','H','ES')
+
+-CRUD vehicule (Backoffice ihany)
+-Protection appel API
+    -CREATION TABLE
+        -token
+            -id
+            -token
+            -date_expiration (avec heure)
+    -pas d'interface pour remplir la table token
+    -A populer dans un code en CLI
+
+-Pour la suite les requetes http vers les endpoints rest
+doivent envoyer des token
+
+-Frontoffice:
+    atao anaty fichier de conf ny token
+    alefa anaty requete

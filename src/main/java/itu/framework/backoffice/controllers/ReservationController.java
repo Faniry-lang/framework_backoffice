@@ -23,7 +23,7 @@ public class ReservationController {
             reservation.setIdClient(createReservation.getIdClient());
             reservation.setIdHotel(createReservation.getIdHotel());
             reservation.setDateHeureArrivee(LocalDateTime.parse(createReservation.getDateHeureArrivee()));
-            reservation.save();
+            reservation = (Reservation) reservation.save();
             String message = URLEncoder.encode(
                     "Réservation créée avec succès!",
                     StandardCharsets.UTF_8.toString()

@@ -1,0 +1,9 @@
+### GET test
+GET http://localhost:8080/test
+Accept: application/json
+Content-Type: application/json
+
+{
+    "token": "rezioruezoiruzoiurzou",
+    "message": "Hello from request body"
+}

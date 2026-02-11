@@ -18,4 +18,3 @@ CREATE TABLE reservation (
                                      ON DELETE RESTRICT
 );
 
-INSERT INTO hotel (nom) VALUES ('Carlton');

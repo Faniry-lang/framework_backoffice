@@ -1,0 +1,12 @@
+TL: 3102
+Dev: 3173
+Tâches:
+    - creation du model reservation
+    - creation du model hotel
+    - creation de la fonction d'insertion pour chaque model
+    - creation de la fonction de recuperation de la liste de reservation avec le nom des hotel cprrespondant
+    - creation de la fonction de recuperation de la liste des reservation sur une date precise
+    - exposition de l'endpoint GET /reservation qui renvoie la liste des reservations
+    - modification de l'endpoint GET /reservation. on peut envoyer un parametre date a la requette et ça retourne la liste de reservation sur cette date
+    -  creer le formulaire d'insertion des reservations
+    - inserer la reservation apers validation des inputs

@@ -1,0 +1,15 @@
+name: Ping Render Backend
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping Render backend
+        run: |
+          curl -fsS https://backoffice-framework.onrender.com/health || echo "Ping failed"

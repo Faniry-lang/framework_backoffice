@@ -1,0 +1,76 @@
+===== CRUD VEHICULE =====
+-Conception:
+    -créer la table vehicule:
+        -id serial pk
+        -ref varchar (10)
+        -nbr_place (int)
+        -type_carburant (varchar)
+
+-affichage:
+    -Créer les JSP suivantes:
+        -vehicule/vehicule-list.jsp
+            -affiche une liste de tous les vehicules
+                -chaque ligne a un bouton voir fiche
+                    -lien vers GET "/api/vehicules/{id}"
+            -bouton ajouter un vehicule en haut
+                    -lien vers GET "/api/vehicules/form"
+        -vehicule/vehicule-form.jsp
+            -formulaire d'insertion de vehicule
+                -submit vers POST "/api/vehicules"
+            -en haut de la page, verifier s'il y a vehicule dans request.getAttribute
+                -Si oui alors on préremplit les champs et on envoie un input hidden name=id value = vehicule.getId()
+        -vehicule/vehicule-fiche.jsp
+            -fiche d'un vehicule
+            -bouton modifier
+                -lien vers GET "/api/vehicules/form?id=[id du vehicule]}"
+
+-Métier:
+    -Créer l'entité Vehicule
+        -id (int)
+            -generated
+        -ref (string)
+        -nbrPlace (int)
+        -typeCarburant (string)
+    -Créer l'enum TypeCarburant avec les valeurs suivantes:
+        -D
+        -EL
+        -H
+        -ES
+    -> l'enum sera utilisé pour populer le champe typeCarburant de l'entité
+        Vehicule
+
+    -Créer le dto CreateVehicule
+        -ref
+        -nbrPlace
+        -typeCarburant
+
+    -Créer le controller VehiculeController
+        -url: "/api/vehicules"
+        -endpoints:
+            -GET : pour findAll
+                @GetMapping
+                public ModelView getAllVehicule() {}
+                -renvoie vers vehicule/vehicule-list.jsp
+
+            -GET "/{id}" :pour findById
+                @GetMapping("/{id}")
+                public ModelView getVehiculeByid(int id) {}
+                -renvoie vers vehicule/vehicule-fiche.jsp
+
+            -GET "/form" : pour afficher le formulaire
+                @GetMapping("/form")
+                public ModelView showVehiculeForm(@RequestParam("id") Integer id) {}
+                    -verifier si id != null, si non null
+                        -findById
+                        -ajouter vehicule dans model.addObject
+                -renvoie vers vehicule/vehicule-form.jsp
+
+            -POST "/" : pour insertion
+                @PostMapping
+                public ModelView createVehicule(CreateVehicule dto) {}
+                -redirect vers vehicule/vehicule-fiche.jsp
+
+            -POST "/{id}" : pour update
+                @PostMapping("/{id}")
+                public ModelView updateVehicule(int id) {}
+                -redirect vers vehicule/vehicule-fiche.jsp

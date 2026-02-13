@@ -101,7 +101,7 @@
                     <p class="card-description">Renseignez les caractéristiques du véhicule</p>
                 </div>
 
-                <form method="post" action="${pageContext.request.contextPath}/api/vehicules">
+                <form method="post" action="${pageContext.request.contextPath}/api/vehicules<%= isUpdate ? "/" + vehicule.getId() : "" %>">
                     <% if (isUpdate) { %>
                     <input type="hidden" name="id" value="<%= vehicule.getId() %>">
                     <% } %>

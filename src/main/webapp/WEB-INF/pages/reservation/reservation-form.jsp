@@ -57,6 +57,14 @@
                     </svg>
                     Réservations
                 </a>
+                <a href="${pageContext.request.contextPath}/api/vehicules" class="nav-item">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M5 17h14v-5H5v5z"/>
+                        <path d="M18 17a2 2 0 100 4 2 2 0 000-4zm-12 0a2 2 0 100 4 2 2 0 000-4z"/>
+                        <path d="M5 9L2 5h20l-3 4H5z"/>
+                    </svg>
+                    Véhicules
+                </a>
             </nav>
 
             <div class="sidebar-footer">

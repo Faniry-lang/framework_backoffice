@@ -1,4 +1,6 @@
-===== CRUD VEHICULE =====
+TL: faniry 3173
+Dev: nekena 3231
+taches:===== CRUD VEHICULE =====
 -Conception:
     -créer la table vehicule:
         -id serial pk
@@ -22,7 +24,7 @@
         -vehicule/vehicule-fiche.jsp
             -fiche d'un vehicule
             -bouton modifier
-                -lien vers GET "/api/vehicules/form?id=[id du vehicule]"
+                -lien vers GET "/api/vehicules/form?id=[id du vehicule]}"
 
 -Métier:
     -Créer l'entité Vehicule

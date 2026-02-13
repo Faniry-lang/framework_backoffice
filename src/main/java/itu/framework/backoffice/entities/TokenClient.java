@@ -61,7 +61,7 @@ public class TokenClient extends BaseEntity {
             FilterSet filterSet = new FilterSet();
             if (now != null ) {
                 filterSet.add("token", Comparator.EQUALS, token);
-                filterSet.add("expirationDate", Comparator.GREATER_THAN, now);
+                filterSet.add("expiration_date", Comparator.GREATER_THAN, now);
                 tokenClients = TokenClient.filter(TokenClient.class, filterSet);
             }
             return !tokenClients.isEmpty();

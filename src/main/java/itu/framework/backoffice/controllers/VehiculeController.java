@@ -64,7 +64,9 @@ public class VehiculeController {
                 vehicule.setRef(dto.getRef());
                 vehicule.setNbrPlace(dto.getNbrPlace());
                 vehicule.setTypeCarburant(dto.getTypeCarburant());
+                System.out.println("updating...");
                 vehicule.update();
+
             }
             return ModelView.redirect("/api/vehicules/" + id);
         } catch (Exception e) {

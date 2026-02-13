@@ -24,7 +24,7 @@ taches:===== CRUD VEHICULE =====
         -vehicule/vehicule-fiche.jsp
             -fiche d'un vehicule
             -bouton modifier
-                -lien vers GET "/api/vehicules/form?id=[id du vehicule]}"
+                -lien vers GET "/api/vehicules/form?id=[id du vehicule]"
 
 -Métier:
     -Créer l'entité Vehicule

@@ -2,6 +2,10 @@ package itu.framework.backoffice.controllers;
 
 import com.itu.framework.annotations.*;
 import com.itu.framework.view.*;
+import itu.framework.backoffice.dtos.RequestDTO;
+import itu.framework.backoffice.entities.TokenClient;
+
+import java.time.LocalDateTime;
 
 @Controller("/")
 public class HomeController {
@@ -17,30 +21,12 @@ public class HomeController {
         return "Ok";
     }
 
-    @GetMapping("/test")
+    @GetMapping("/protected")
     @Json
-    public String test(@RequestBody RequestDto requestDto) {
-        return "Message recu: "+requestDto.getMessage()+" avec le token: "+requestDto.getToken();
+    public String getProtected(@RequestBody RequestDTO body) {
+        boolean validation = TokenClient.isTokenValid(body.getToken(), LocalDateTime.now());
+        if (validation) return "success";
+        return "failed";
     }
-    
-    private static class RequestDto {
-        String token;
-        String message;
 
-        public String getToken() {
-            return token;
-        }
-
-        public void setToken(String token) {
-            this.token = token;
-        }
-
-        public String getMessage() {
-            return message;
-        }
-
-        public void setMessage(String message) {
-            this.message = message;
-        }
-    }
 }

@@ -1,6 +1,7 @@
 package itu.framework.backoffice.dtos;
 
 public class CreateVehicule {
+    Integer id;
     String ref;
     Integer nbrPlace;
     String typeCarburant;
@@ -27,5 +28,13 @@ public class CreateVehicule {
 
     public void setTypeCarburant(String typeCarburant) {
         this.typeCarburant = typeCarburant;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
     }
 }

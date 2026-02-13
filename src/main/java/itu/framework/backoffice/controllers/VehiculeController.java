@@ -20,7 +20,7 @@ public class VehiculeController {
 
     @GetMapping("/{id}")
     public ModelView getVehiculeById(int id) throws Exception {
-        Vehicule vehicule = (Vehicule) Vehicule.findById(Vehicule.class, id);
+        Vehicule vehicule = (Vehicule) Vehicule.findById(id, Vehicule.class);
         ModelView view = new ModelView("vehicule/vehicule-fiche");
         view.addObject("vehicule", vehicule);
         return view;
@@ -31,7 +31,7 @@ public class VehiculeController {
         ModelView view = new ModelView("vehicule/vehicule-form");
 
         if (id != null) {
-            Vehicule vehicule = (Vehicule) Vehicule.findById(Vehicule.class, id);
+            Vehicule vehicule = (Vehicule) Vehicule.findById(id, Vehicule.class);
             view.addObject("vehicule", vehicule);
         }
 
@@ -42,11 +42,8 @@ public class VehiculeController {
     public ModelView createVehicule(CreateVehicule dto) throws Exception {
         try {
             Vehicule vehicule = new Vehicule();
+            vehicule.setRef(dto.getRef());
 
-            // Si un ID est fourni, c'est une mise à jour
-            if (dto.getRef() != null && !dto.getRef().isEmpty()) {
-                vehicule.setRef(dto.getRef());
-            }
             vehicule.setNbrPlace(dto.getNbrPlace());
             vehicule.setTypeCarburant(dto.getTypeCarburant());
 
@@ -61,15 +58,16 @@ public class VehiculeController {
     @PostMapping("/{id}")
     public ModelView updateVehicule(int id, CreateVehicule dto) throws Exception {
         try {
-            Vehicule vehicule = (Vehicule) Vehicule.findById(Vehicule.class, id);
-
+            Vehicule vehicule = (Vehicule) Vehicule.findById(id, Vehicule.class);
+            System.out.println("DEBUGGING UPDATE ID: "+id);
             if (vehicule != null) {
                 vehicule.setRef(dto.getRef());
                 vehicule.setNbrPlace(dto.getNbrPlace());
                 vehicule.setTypeCarburant(dto.getTypeCarburant());
-                vehicule.save();
-            }
+                System.out.println("updating...");
+                vehicule.update();
 
+            }
             return ModelView.redirect("/api/vehicules/" + id);
         } catch (Exception e) {
             return ModelView.redirect("/error?error-message=" + e.getMessage() + "&&link=/api/vehicules/" + id);

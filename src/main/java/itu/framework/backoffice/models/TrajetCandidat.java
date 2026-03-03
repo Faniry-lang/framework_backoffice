@@ -3,6 +3,7 @@ package itu.framework.backoffice.models;
 import itu.framework.backoffice.entities.Reservation;
 import itu.framework.backoffice.entities.Vehicule;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -11,11 +12,10 @@ public class TrajetCandidat {
     List<Reservation> reservations;
     LocalDateTime heureDepart;
     LocalDateTime heureArrivee;
-    Double distanceTotale;
+    BigDecimal distanceTotale;
     List<String> ordreVisites;
 
-    public TrajetCandidat(Vehicule vehicule, List<Reservation> reservations, LocalDateTime heureDepart,
-            LocalDateTime heureArrivee, Double distanceTotale, List<String> ordreVisites) {
+    public TrajetCandidat(Vehicule vehicule, List<Reservation> reservations, LocalDateTime heureDepart, LocalDateTime heureArrivee, BigDecimal distanceTotale, List<String> ordreVisites) {
         this.vehicule = vehicule;
         this.reservations = reservations;
         this.heureDepart = heureDepart;
@@ -59,11 +59,11 @@ public class TrajetCandidat {
         this.heureArrivee = heureArrivee;
     }
 
-    public Double getDistanceTotale() {
+    public BigDecimal getDistanceTotale() {
         return distanceTotale;
     }
 
-    public void setDistanceTotale(Double distanceTotale) {
+    public void setDistanceTotale(BigDecimal distanceTotale) {
         this.distanceTotale = distanceTotale;
     }
 

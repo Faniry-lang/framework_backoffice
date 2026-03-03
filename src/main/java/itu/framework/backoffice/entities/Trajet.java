@@ -6,6 +6,7 @@ import legacy.query.FilterSet;
 import legacy.schema.BaseEntity;
 import legacy.strategy.GeneratedAfterPersistence;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -31,7 +32,7 @@ public class Trajet extends BaseEntity {
     private LocalDateTime heureArrivee;
 
     @Column(name = "distance_totale")
-    private Double distanceTotale;
+    private BigDecimal distanceTotale;
 
     @Column(name = "ordre_visites")
     private String ordreVisites; // JSON ou CSV: "AERO01,HOT001,HOT002,AERO01"
@@ -120,11 +121,11 @@ public class Trajet extends BaseEntity {
         this.heureArrivee = heureArrivee;
     }
 
-    public Double getDistanceTotale() {
+    public BigDecimal getDistanceTotale() {
         return distanceTotale;
     }
 
-    public void setDistanceTotale(Double distanceTotale) {
+    public void setDistanceTotale(BigDecimal distanceTotale) {
         this.distanceTotale = distanceTotale;
     }
 

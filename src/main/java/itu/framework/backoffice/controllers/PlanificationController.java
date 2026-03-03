@@ -27,47 +27,30 @@ public class PlanificationController {
     @PostMapping("/assign")
     public ModelView assignVehicles(String date) throws Exception {
         try {
-            // 1. Récupérer date du paramètre (parse en LocalDate)
             LocalDate dateLocalDate = LocalDate.parse(date);
-
-            // 2. Exécuter AssignmentService.assignVehicles(date) - results used via
-            // Trajet.findByDate
             AssignmentService assignmentService = new AssignmentService();
             AssignmentResult result = assignmentService.assignVehicles(dateLocalDate);
-
-            // 3. Récupérer tous trajets créés pour cette date via Trajet.findByDate(date)
-            List<Trajet> trajets = Trajet.findByDate(dateLocalDate);
+            List<Trajet> trajets = result.getTrajetsCreated();
             List<TrajetDetailDTO> trajetsDetails = new ArrayList<>();
 
-            // 4. Pour chaque trajet:
             for (Trajet trajet : trajets) {
-                // - Récupérer véhicule
-                // - Récupérer réservations via TrajetReservation.findByTrajet(trajet.getId())
                 List<TrajetReservation> liens = TrajetReservation.findByTrajet(trajet.getId());
-
-                // - Créer TrajetDetailDTO
                 TrajetDetailDTO dto = new TrajetDetailDTO(trajet, liens);
                 trajetsDetails.add(dto);
             }
 
-            // 5. Récupérer réservations non assignées via
-            // Reservation.findUnassignedByDate(date)
             List<Reservation> reservationsNonAssigneesList = Reservation.findUnassignedByDate(dateLocalDate);
-
-            // 6. Créer ReservationNonAssigneeDTO pour chaque
             List<ReservationNonAssigneeDTO> reservationsNonAssignees = new ArrayList<>();
             for (Reservation reservation : reservationsNonAssigneesList) {
                 ReservationNonAssigneeDTO dto = new ReservationNonAssigneeDTO(reservation);
                 reservationsNonAssignees.add(dto);
             }
 
-            // 7. Passer en attributs
             ModelView mv = new ModelView("planification/planification-view");
             mv.addObject("trajetsDetails", trajetsDetails);
             mv.addObject("reservationsNonAssignees", reservationsNonAssignees);
             mv.addObject("dateSelectionnee", dateLocalDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
 
-            // 8. Afficher planification-view.jsp
             return mv;
 
         } catch (Exception e) {

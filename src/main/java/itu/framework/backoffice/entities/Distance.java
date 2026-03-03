@@ -6,6 +6,7 @@ import legacy.query.FilterSet;
 import legacy.schema.BaseEntity;
 import legacy.strategy.GeneratedAfterPersistence;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.HashMap;
@@ -25,7 +26,7 @@ public class Distance extends BaseEntity {
     private String codeTo;
 
     @Column(name = "distance_km")
-    private Double distanceKm;
+    private BigDecimal distanceKm;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -82,7 +83,7 @@ public class Distance extends BaseEntity {
             Distance distance = getDistance(codeFrom, codeTo);
             if (distance != null && distance.getDistanceKm() != null && vitesseMoyenne != null && vitesseMoyenne > 0) {
                 // Temps = Distance / Vitesse * 60 (pour convertir en minutes)
-                return (int) Math.ceil((distance.getDistanceKm() / vitesseMoyenne) * 60);
+                return (int) Math.ceil((distance.getDistanceKm().divide(BigDecimal.valueOf(vitesseMoyenne))).doubleValue() * 60);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -131,7 +132,7 @@ public class Distance extends BaseEntity {
      * @param distanceKm Distance en kilomètres
      * @return L'entité Distance créée/mise à jour
      */
-    public static Distance setDistance(String codeFrom, String codeTo, Double distanceKm) throws Exception {
+    public static Distance setDistance(String codeFrom, String codeTo, BigDecimal distanceKm) throws Exception {
         // Chercher si existe déjà
         FilterSet filters = new FilterSet();
         filters.add("code_from", Comparator.EQUALS, codeFrom);
@@ -187,11 +188,11 @@ public class Distance extends BaseEntity {
         this.codeTo = codeTo;
     }
 
-    public Double getDistanceKm() {
+    public BigDecimal getDistanceKm() {
         return distanceKm;
     }
 
-    public void setDistanceKm(Double distanceKm) {
+    public void setDistanceKm(BigDecimal distanceKm) {
         this.distanceKm = distanceKm;
     }
 

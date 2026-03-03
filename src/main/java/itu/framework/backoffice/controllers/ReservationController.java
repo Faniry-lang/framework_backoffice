@@ -4,7 +4,7 @@ import com.itu.framework.annotations.*;
 import com.itu.framework.view.ModelView;
 import itu.framework.backoffice.dtos.CreateReservation;
 import itu.framework.backoffice.dtos.ReservationDTO;
-import itu.framework.backoffice.entities.Hotel;
+import itu.framework.backoffice.entities.Lieux;
 import itu.framework.backoffice.entities.Reservation;
 
 import java.net.URLEncoder;
@@ -38,7 +38,7 @@ public class ReservationController {
 
     @GetMapping("/form")
     public ModelView showReservationForm(@RequestParam("message") String message) throws Exception {
-        List<Hotel> hotelList = Hotel.findAll(Hotel.class);
+        List<Lieux> hotelList = Lieux.findAll(Lieux.class);
         List<Reservation> reservations = Reservation.findAll(Reservation.class);
         List<ReservationDTO> reservationDTOList = new java.util.ArrayList<>();
         for (Reservation reservation : reservations) {

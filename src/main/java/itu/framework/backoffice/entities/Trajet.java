@@ -1,5 +1,16 @@
 package itu.framework.backoffice.entities;
 
+import legacy.annotations.Column;
+import legacy.annotations.Entity;
+import legacy.annotations.ForeignKey;
+import legacy.annotations.Id;
+import legacy.query.Comparator;
+import legacy.query.FilterSet;
+import legacy.schema.BaseEntity;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.math.BigDecimal;
 import legacy.annotations.*;
 import legacy.query.Comparator;
 import legacy.query.FilterSet;
@@ -38,6 +49,7 @@ public class Trajet extends BaseEntity {
 
     /**
      * Trouve les trajets pour une date donnée
+     * 
      * @param date La date de recherche
      * @return Liste des trajets pour cette date
      */
@@ -49,8 +61,9 @@ public class Trajet extends BaseEntity {
 
     /**
      * Trouve un trajet par véhicule et date
+     * 
      * @param idVehicule L'ID du véhicule
-     * @param date La date
+     * @param date       La date
      * @return Le trajet ou null si non trouvé
      */
     public static Trajet findByVehiculeAndDate(Integer idVehicule, LocalDate date) throws Exception {
@@ -69,6 +82,7 @@ public class Trajet extends BaseEntity {
 
     /**
      * Récupère les réservations associées à ce trajet
+     * 
      * @return Array des liaisons trajet-réservation
      */
     public TrajetReservation[] getReservations() throws Exception {
@@ -132,6 +146,21 @@ public class Trajet extends BaseEntity {
     public void setOrdreVisites(String ordreVisites) {
         this.ordreVisites = ordreVisites;
     }
+
+    // public static List<Trajet> findByVehiculeAndDate(Integer idVehicule,
+    // LocalDate date) throws Exception {
+    // FilterSet filterSet = new FilterSet();
+    // filterSet.add("id_vehicule", Comparator.EQUALS, idVehicule);
+    // filterSet.add("date_trajet", Comparator.LESS_THAN_OR_EQUALS, date);
+    // return Trajet.filter(Trajet.class, filterSet);
+    // }
+
+    // public List<Reservation> getReservations() throws Exception {
+    // String sql = "SELECT r.* " +
+    // "FROM reservation r JOIN trajet_reservation tr " +
+    // "ON tr.id_reservation = r.id " +
+    // "WHERE tr.id_trajet = ?";
+    // Object[] params = { this.id };
+    // return Reservation.fetch(Reservation.class, sql, params);
+    // }
 }
-
-

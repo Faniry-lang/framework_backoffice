@@ -26,7 +26,7 @@ public class Reservation extends BaseEntity {
     String idClient;
 
     @Column(name = "id_hotel")
-    @ForeignKey(mappedBy = "hotel", entity = Hotel.class)
+    @ForeignKey(mappedBy = "hotel", entity = Lieux.class)
     Integer idHotel;
 
     @Column(name = "date_heure_arrivee")
@@ -99,8 +99,9 @@ public class Reservation extends BaseEntity {
         ReservationDTO dto =  new ReservationDTO();
         dto.setId_client(this.getIdClient());
         dto.setNb_passager(this.getNbPassager());
-        dto.setNom_hotel(((Hotel) this.getForeignKey("id_hotel")).getNom());
+        dto.setNom_hotel(((Lieux) this.getForeignKey("id_hotel")).getNom());
         dto.setDate_reservation(this.getDateHeureArrivee().toString());
+        dto.setTempsAttenteMax(this.getTempsAttenteMax());
         return dto;
     }
 

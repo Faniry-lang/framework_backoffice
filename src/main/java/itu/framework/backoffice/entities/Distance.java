@@ -35,72 +35,79 @@ public class Distance extends BaseEntity {
 
     /**
      * Récupère la distance entre deux lieux
+     * 
      * @param codeFrom Code du lieu de départ
-     * @param codeTo Code du lieu d'arrivée
+     * @param codeTo   Code du lieu d'arrivée
      * @return Distance en km, ou null si non trouvée
      */
-    public static Double getDistance(String codeFrom, String codeTo) throws Exception {
-        String cacheKey = codeFrom + ":" + codeTo;
+    // public static Double getDistance(String codeFrom, String codeTo) throws
+    // Exception {
+    // String cacheKey = codeFrom + ":" + codeTo;
 
-        // Vérifier le cache
-        if (distanceCache.containsKey(cacheKey)) {
-            return distanceCache.get(cacheKey);
-        }
+    // // Vérifier le cache
+    // if (distanceCache.containsKey(cacheKey)) {
+    // return distanceCache.get(cacheKey);
+    // }
 
-        FilterSet filters = new FilterSet();
-        filters.add("code_from", Comparator.EQUALS, codeFrom);
-        filters.add("code_to", Comparator.EQUALS, codeTo);
+    // FilterSet filters = new FilterSet();
+    // filters.add("code_from", Comparator.EQUALS, codeFrom);
+    // filters.add("code_to", Comparator.EQUALS, codeTo);
 
-        List<Distance> distances = Distance.filter(Distance.class, filters);
+    // List<Distance> distances = Distance.filter(Distance.class, filters);
 
-        if (distances != null && !distances.isEmpty()) {
-            Distance distance = distances.get(0);
-            Double distanceValue = distance.getDistanceKm();
-            distanceCache.put(cacheKey, distanceValue);
-            return distanceValue;
-        }
+    // if (distances != null && !distances.isEmpty()) {
+    // Distance distance = distances.get(0);
+    // Double distanceValue = distance.getDistanceKm();
+    // distanceCache.put(cacheKey, distanceValue);
+    // return distanceValue;
+    // }
 
-        return null;
-    }
+    // return null;
+    // }
 
     /**
      * Récupère la distance avec une valeur par défaut si non trouvée
-     * @param codeFrom Code du lieu de départ
-     * @param codeTo Code du lieu d'arrivée
+     * 
+     * @param codeFrom        Code du lieu de départ
+     * @param codeTo          Code du lieu d'arrivée
      * @param defaultDistance Distance par défaut
      * @return Distance en km
      */
-    public static Double getDistanceOrDefault(String codeFrom, String codeTo, Double defaultDistance) {
-        try {
-            Double distance = getDistance(codeFrom, codeTo);
-            return distance != null ? distance : defaultDistance;
-        } catch (Exception e) {
-            return defaultDistance;
-        }
-    }
+    // public static Double getDistanceOrDefault(String codeFrom, String codeTo,
+    // Double defaultDistance) {
+    // try {
+    // Double distance = getDistance(codeFrom, codeTo);
+    // return distance != null ? distance : defaultDistance;
+    // } catch (Exception e) {
+    // return defaultDistance;
+    // }
+    // }
 
     /**
      * Calcule le temps de trajet en minutes
-     * @param codeFrom Code du lieu de départ
-     * @param codeTo Code du lieu d'arrivée
+     * 
+     * @param codeFrom       Code du lieu de départ
+     * @param codeTo         Code du lieu d'arrivée
      * @param vitesseMoyenne Vitesse moyenne en km/h
      * @return Temps en minutes, ou null si distance non trouvée
      */
-    public static Integer calculateTravelTime(String codeFrom, String codeTo, Double vitesseMoyenne) {
-        try {
-            Double distance = getDistance(codeFrom, codeTo);
-            if (distance != null && vitesseMoyenne != null && vitesseMoyenne > 0) {
-                // Temps = Distance / Vitesse * 60 (pour convertir en minutes)
-                return (int) Math.ceil((distance / vitesseMoyenne) * 60);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
-    }
+    // public static Integer calculateTravelTime(String codeFrom, String codeTo,
+    // Double vitesseMoyenne) {
+    // try {
+    // Double distance = getDistance(codeFrom, codeTo);
+    // if (distance != null && vitesseMoyenne != null && vitesseMoyenne > 0) {
+    // // Temps = Distance / Vitesse * 60 (pour convertir en minutes)
+    // return (int) Math.ceil((distance / vitesseMoyenne) * 60);
+    // }
+    // } catch (Exception e) {
+    // e.printStackTrace();
+    // }
+    // return null;
+    // }
 
     /**
      * Trouve toutes les distances depuis un lieu
+     * 
      * @param codeFrom Code du lieu de départ
      * @return Liste des distances
      */
@@ -113,6 +120,7 @@ public class Distance extends BaseEntity {
 
     /**
      * Trouve toutes les distances vers un lieu
+     * 
      * @param codeTo Code du lieu d'arrivée
      * @return Liste des distances
      */
@@ -132,8 +140,9 @@ public class Distance extends BaseEntity {
 
     /**
      * Ajoute ou met à jour une distance
-     * @param codeFrom Code du lieu de départ
-     * @param codeTo Code du lieu d'arrivée
+     * 
+     * @param codeFrom   Code du lieu de départ
+     * @param codeTo     Code du lieu d'arrivée
      * @param distanceKm Distance en kilomètres
      * @return L'entité Distance créée/mise à jour
      */
@@ -191,6 +200,26 @@ public class Distance extends BaseEntity {
 
     public void setCodeTo(String codeTo) {
         this.codeTo = codeTo;
+    }
+
+    // public BigDecimal getDistanceKm() {
+    // return distanceKm;
+    // }
+
+    // public void setDistanceKm(BigDecimal distanceKm) {
+    // this.distanceKm = distanceKm;
+    // }
+
+    public static Distance getDistance(String from, String to) throws Exception {
+        String sql = "SELECT * FROM distance WHERE " +
+                "(code_from = ? AND code_to = ?) OR (code_from = ? AND code_to = ?)";
+        Object[] params = { from, to, to, from };
+        List<Distance> distanceList = Distance.fetch(Distance.class,
+                sql, params);
+        if (distanceList.size() > 0) {
+            return distanceList.get(0);
+        }
+        return null;
     }
 
     public Double getDistanceKm() {

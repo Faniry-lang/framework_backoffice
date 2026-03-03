@@ -1,6 +1,6 @@
 <%@ page contentType="text/html; charset=UTF-8" %>
 <%@ page import="java.util.List" %>
-<%@ page import="itu.framework.backoffice.entities.Hotel" %>
+<%@ page import="itu.framework.backoffice.entities.Lieux" %>
 <%@ page import="itu.framework.backoffice.dtos.ReservationDTO" %>
 <!DOCTYPE html>
 <html lang="fr" data-theme="dark">
@@ -141,9 +141,9 @@
                             <select class="form-select" name="idHotel" required>
                                 <option value="">-- Choisir un hôtel --</option>
                                 <%
-                                    List<Hotel> hotels = (List<Hotel>) request.getAttribute("hotels");
+                                    List<Lieux> hotels = (List<Lieux>) request.getAttribute("hotels");
                                     if (hotels != null) {
-                                        for (Hotel h : hotels) {
+                                        for (Lieux h : hotels) {
                                 %>
                                 <option value="<%= h.getId() %>"><%= h.getNom() %></option>
                                 <%

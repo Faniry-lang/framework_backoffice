@@ -1,31 +1,39 @@
 package itu.framework.backoffice.entities;
 
-import legacy.annotations.*;
+import legacy.annotations.Column;
+import legacy.annotations.Entity;
+import legacy.annotations.Id;
 import legacy.schema.BaseEntity;
-import legacy.strategy.GeneratedAfterPersistence;
 
 @Entity(tableName = "vehicule")
 public class Vehicule extends BaseEntity {
+    public Vehicule() {
+        super();
+    }
+
     @Id
     @Column
-    @Generated(strategy = GeneratedAfterPersistence.class)
-    Integer id;
+    private Integer id;
 
     @Column
-    String ref;
+    private String ref;
 
     @Column(name = "nbr_place")
-    Integer nbrPlace;
+    private Integer nbrPlace;
 
     @Column(name = "type_carburant")
-    String typeCarburant;
+    private String typeCarburant;
 
     @Column(name = "vitesse_moyenne")
-    Double vitesseMoyenne;
+    private Double vitesseMoyenne;
+
+    // @Column(name = "vitesse_moyenne")
+    // Double vitesseMoyenne;
 
     /**
      * Récupère la vitesse moyenne du véhicule
      * Si pas définie, utilise la constante selon le type de carburant
+     * 
      * @return Vitesse moyenne en km/h
      */
     public Double getVitesseMoyenneEffective() {
@@ -38,6 +46,7 @@ public class Vehicule extends BaseEntity {
 
     /**
      * Récupère la priorité du véhicule selon son carburant
+     * 
      * @return Priorité (1=highest, 4=lowest)
      */
     public Integer getPriorite() {
@@ -46,6 +55,7 @@ public class Vehicule extends BaseEntity {
 
     /**
      * Vérifie si le véhicule peut transporter le nombre de passagers demandé
+     * 
      * @param nbPassagers Nombre de passagers
      * @return true si possible
      */
@@ -55,8 +65,9 @@ public class Vehicule extends BaseEntity {
 
     /**
      * Calcule le temps de trajet entre deux lieux pour ce véhicule
+     * 
      * @param codeFrom Code du lieu de départ
-     * @param codeTo Code du lieu d'arrivée
+     * @param codeTo   Code du lieu d'arrivée
      * @return Temps en minutes, ou null si impossible à calculer
      */
     public Integer calculateTravelTime(String codeFrom, String codeTo) {

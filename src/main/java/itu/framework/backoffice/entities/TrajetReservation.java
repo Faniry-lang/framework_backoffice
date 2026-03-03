@@ -83,8 +83,17 @@ public class TrajetReservation extends BaseEntity {
     public void setOrdreVisite(Integer ordreVisite) {
         this.ordreVisite = ordreVisite;
     }
+
+    // public static List<TrajetReservation> findByTrajet(Integer idTrajet) throws
+    // Exception {
+    // return TrajetReservation.findBy("id_trajet", idTrajet,
+    // TrajetReservation.class);
+    // }
+
+    // public static List<TrajetReservation> findByReservation(Integer
+    // idReservation) throws Exception {
+    // return TrajetReservation.findBy("id_reservation", idReservation,
+    // TrajetReservation.class);
+    // }
+
 }
-
-
-
-

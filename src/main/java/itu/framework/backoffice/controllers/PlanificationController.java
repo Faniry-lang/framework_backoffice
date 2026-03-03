@@ -7,7 +7,8 @@ import itu.framework.backoffice.dtos.ReservationNonAssigneeDTO;
 import itu.framework.backoffice.entities.Trajet;
 import itu.framework.backoffice.entities.Reservation;
 import itu.framework.backoffice.entities.TrajetReservation;
-import itu.framework.backoffice.helpers.AssignmentService;
+import itu.framework.backoffice.models.AssignmentResult;
+import itu.framework.backoffice.services.AssignmentService;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -31,7 +32,8 @@ public class PlanificationController {
 
             // 2. Exécuter AssignmentService.assignVehicles(date) - results used via
             // Trajet.findByDate
-            AssignmentService.assignVehicles(dateLocalDate);
+            AssignmentService assignmentService = new AssignmentService();
+            AssignmentResult result = assignmentService.assignVehicles(dateLocalDate);
 
             // 3. Récupérer tous trajets créés pour cette date via Trajet.findByDate(date)
             List<Trajet> trajets = Trajet.findByDate(dateLocalDate);

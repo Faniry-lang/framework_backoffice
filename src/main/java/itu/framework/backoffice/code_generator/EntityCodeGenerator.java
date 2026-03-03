@@ -10,7 +10,7 @@ public class EntityCodeGenerator {
 
         // generation auto hoan table na view
         // uncomment and run this code
-         EntityGenerator.generateEntity("token_client", "TABLE", outputFolderPath, packageName);
+         EntityGenerator.generateEntity("trajet_reservation", "TABLE", outputFolderPath, packageName);
     }
 }
 

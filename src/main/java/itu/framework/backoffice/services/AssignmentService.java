@@ -15,31 +15,61 @@ public class AssignmentService {
     public AssignmentResult assignVehicles(LocalDate date) throws Exception {
         List<Reservation> reservationsDisponibles = Reservation.findUnassignedByDate(date);
         reservationsDisponibles.sort(Comparator.comparing(Reservation::getDateHeureArrivee));
-        List<Vehicule> vehicules = Vehicule.findAll(Vehicule.class);
+
+        List<Vehicule> vehiculesDisponibles = new ArrayList<>(Vehicule.findAll(Vehicule.class));
+
         Lieux aeroport = Lieux.findAeroport();
         if (aeroport == null) {
             throw new Exception("Aéroport non trouvé dans la base de données");
         }
+
         List<TrajetCandidat> candidats = new ArrayList<>();
         Set<Integer> reservationsAssignees = new HashSet<>();
-        for (Vehicule vehicule : vehicules) {
 
-            List<Reservation> disponiblesPourVehicule = new ArrayList<>();
+        while (!reservationsDisponibles.isEmpty()) {
+            List<Reservation> disponiblesPourTraitement = new ArrayList<>();
             for (Reservation r : reservationsDisponibles) {
                 if (!reservationsAssignees.contains(r.getId())) {
-                    disponiblesPourVehicule.add(r);
+                    disponiblesPourTraitement.add(r);
                 }
             }
 
-            if (disponiblesPourVehicule.isEmpty()) {
+            if (disponiblesPourTraitement.isEmpty()) {
+                break;
+            }
+
+            Reservation premiereReservation = disponiblesPourTraitement.get(0);
+
+            Vehicule meilleurVehicule = findBestVehicle(premiereReservation, vehiculesDisponibles);
+
+            if (meilleurVehicule == null) {
+                reservationsAssignees.add(premiereReservation.getId());
                 continue;
             }
 
-            List<Reservation> groupe = groupReservations(vehicule, disponiblesPourVehicule);
+            List<Reservation> groupe = groupReservations(meilleurVehicule, disponiblesPourTraitement);
 
             if (!groupe.isEmpty()) {
-                TrajetCandidat candidat = optimizeRoute(vehicule, groupe, aeroport);
+                TrajetCandidat candidat = optimizeRoute(meilleurVehicule, groupe, aeroport);
+
+                TripTiming timing = calculateTripTiming(meilleurVehicule, groupe, candidat.getOrdreVisites());
+                if (timing != null) {
+                    candidat.setHeureDepart(timing.getHeureDepart());
+                    candidat.setHeureArrivee(timing.getHeureArrivee());
+                    candidat.setDistanceTotale(timing.getDistanceTotale());
+                }
+
                 candidats.add(candidat);
+
+                for (Reservation r : groupe) {
+                    reservationsAssignees.add(r.getId());
+                }
+
+                vehiculesDisponibles.remove(meilleurVehicule);
+            }
+
+            if (vehiculesDisponibles.isEmpty()) {
+                break;
             }
         }
 
@@ -49,12 +79,12 @@ public class AssignmentService {
         ));
 
         List<Trajet> trajetsCreated = new ArrayList<>();
-        reservationsAssignees.clear();
+        Set<Integer> reservationsSauvegardees = new HashSet<>();
 
         for (TrajetCandidat candidat : candidats) {
             boolean toutesDisponibles = true;
             for (Reservation r : candidat.getReservations()) {
-                if (reservationsAssignees.contains(r.getId())) {
+                if (reservationsSauvegardees.contains(r.getId())) {
                     toutesDisponibles = false;
                     break;
                 }
@@ -65,14 +95,14 @@ public class AssignmentService {
                 trajetsCreated.add(trajet);
 
                 for (Reservation r : candidat.getReservations()) {
-                    reservationsAssignees.add(r.getId());
+                    reservationsSauvegardees.add(r.getId());
                 }
             }
         }
 
         List<Reservation> reservationsNonAssignees = new ArrayList<>();
         for (Reservation r : reservationsDisponibles) {
-            if (!reservationsAssignees.contains(r.getId())) {
+            if (!reservationsSauvegardees.contains(r.getId())) {
                 reservationsNonAssignees.add(r);
             }
         }
@@ -156,11 +186,6 @@ public class AssignmentService {
             }
         }
 
-        Distance retourAeroport = Distance.getDistance(positionActuelle.getCode(), aeroport.getCode());
-        if (retourAeroport != null) {
-            distanceTotal = distanceTotal.add(retourAeroport.getDistanceKm());
-        }
-        ordreVisites.add(aeroport.getCode());
 
         LocalDateTime heureDepart = groupe.get(0).getDateHeureArrivee();
         double minutesTrajet = distanceTotal.doubleValue() / vehicule.getVitesseMoyenne() * 60;

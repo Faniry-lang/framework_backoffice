@@ -121,43 +121,16 @@ public class Reservation extends BaseEntity {
         return dtos;
     }
 
-    /**
-     * Trouve les réservations non assignées pour une date donnée
-     * @param date La date de recherche
-     * @return Liste des réservations non assignées
-     */
     public static List<Reservation> findUnassignedByDate(LocalDate date) throws Exception {
-        // 1. Récupérer toutes les réservations du jour
-        FilterSet filters = new FilterSet();
-        if(date != null) {
-            LocalDateTime endOfTheDay = date.atStartOfDay().plusHours(24);
-            LocalDateTime startOfTheDay = date.atStartOfDay();
-            filters.add("date_heure_arrivee", Comparator.LESS_THAN, endOfTheDay);
-            filters.add("date_heure_arrivee", Comparator.GREATER_THAN, startOfTheDay);
-        }
-        List<Reservation> allReservations = Reservation.filter(Reservation.class, filters);
-
-        if (allReservations == null || allReservations.isEmpty()) {
-            return new ArrayList<>();
-        }
-
-        // 2. Récupérer les IDs des réservations assignées
-        List<Integer> assignedIds = new ArrayList<>();
-        for (Reservation reservation : allReservations) {
-            List<itu.framework.backoffice.entities.TrajetReservation> trajets = itu.framework.backoffice.entities.TrajetReservation.findByReservation(reservation.getId());
-            if (trajets != null && !trajets.isEmpty()) {
-                assignedIds.add(reservation.getId());
-            }
-        }
-
-        // 3. Filtrer pour garder seulement les non assignées
-        List<Reservation> unassigned = new ArrayList<>();
-        for (Reservation reservation : allReservations) {
-            if (!assignedIds.contains(reservation.getId())) {
-                unassigned.add(reservation);
-            }
-        }
-
-        return unassigned;
+        String sql = "SELECT r.*\n" +
+                "FROM reservation r LEFT JOIN\n" +
+                "(SELECT tr.*\n" +
+                "FROM trajet t JOIN trajet_reservation tr\n" +
+                "                   ON t.id = tr.id_trajet\n" +
+                "WHERE t.date_trajet < ?) AS trajet_before_date\n" +
+                "ON trajet_before_date.id_reservation = r.id\n" +
+                "WHERE trajet_before_date.id IS NULL;";
+        Object[] params = { date };
+        return Reservation.fetch(Reservation.class, sql, params);
     }
 }

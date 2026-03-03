@@ -3,7 +3,13 @@ package itu.framework.backoffice.entities;
 import legacy.annotations.Column;
 import legacy.annotations.Entity;
 import legacy.annotations.Id;
+import legacy.query.Comparator;
+import legacy.query.FilterSet;
 import legacy.schema.BaseEntity;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity(tableName = "vehicule")
 public class Vehicule extends BaseEntity {
@@ -112,5 +118,29 @@ public class Vehicule extends BaseEntity {
 
     public void setVitesseMoyenne(Double vitesseMoyenne) {
         this.vitesseMoyenne = vitesseMoyenne;
+    }
+
+    public List<Trajet> findTrajets(LocalDate date) throws Exception {
+        FilterSet filterSet = new FilterSet();
+        filterSet.add("date_trajet", Comparator.EQUALS, date);
+        filterSet.add("id_vehicule", Comparator.EQUALS, this.id);
+        return Trajet.filter(Trajet.class, filterSet);
+    }
+
+    public boolean estOccupe(List<Trajet> trajets, LocalDateTime dateTime) throws Exception {
+        for(Trajet trajet : trajets) {
+            if(
+                    dateTime.isAfter(trajet.getHeureDepart()) &&
+                            dateTime.isBefore(trajet.getHeureArrivee())
+            ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean estOccupe(LocalDate date, LocalDateTime dateTime) throws Exception {
+        List<Trajet> trajetList = findTrajets(date);
+        return estOccupe(trajetList, dateTime);
     }
 }

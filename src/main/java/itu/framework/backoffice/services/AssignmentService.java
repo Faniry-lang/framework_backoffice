@@ -47,7 +47,7 @@ public class AssignmentService {
                 continue;
             }
 
-            List<Reservation> groupe = groupReservations(meilleurVehicule, disponiblesPourTraitement);
+            List<Reservation> groupe = groupReservations(meilleurVehicule, date, disponiblesPourTraitement);
 
             if (!groupe.isEmpty()) {
                 TrajetCandidat candidat = optimizeRoute(meilleurVehicule, groupe, aeroport);
@@ -110,7 +110,7 @@ public class AssignmentService {
         return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
     }
 
-    private List<Reservation> groupReservations(Vehicule vehicule, List<Reservation> disponibles) {
+    private List<Reservation> groupReservations(Vehicule vehicule, LocalDate date, List<Reservation> disponibles) throws Exception {
         List<Reservation> groupe = new ArrayList<>();
         if (disponibles.isEmpty()) {
             return groupe;
@@ -125,12 +125,16 @@ public class AssignmentService {
 
         groupe.add(premiere);
 
+        List<Trajet> trajets = vehicule.findTrajets(date);
+
         for (int i = 1; i < disponibles.size(); i++) {
             Reservation candidate = disponibles.get(i);
             int nouvelleCapacite = capaciteTotale + candidate.getNbPassager();
-            if (nouvelleCapacite <= vehicule.getNbrPlace()
+            if ( nouvelleCapacite <= vehicule.getNbrPlace()
                     && candidate.getDateHeureArrivee().isBefore(
-                    premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax()))
+                        premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax())
+                    )
+                    && !vehicule.estOccupe(trajets, premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax()))
             ) {
                 groupe.add(candidate);
                 capaciteTotale = nouvelleCapacite;

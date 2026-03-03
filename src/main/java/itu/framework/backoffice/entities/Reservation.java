@@ -122,14 +122,12 @@ public class Reservation extends BaseEntity {
     }
 
     public static List<Reservation> findUnassignedByDate(LocalDate date) throws Exception {
-        String sql = "SELECT r.*\n" +
-                "FROM reservation r LEFT JOIN\n" +
-                "(SELECT tr.*\n" +
+        String sql = "SELECT * FROM reservation\n" +
+                "WHERE id NOT IN\n" +
+                "(SELECT tr.id_reservation\n" +
                 "FROM trajet t JOIN trajet_reservation tr\n" +
                 "                   ON t.id = tr.id_trajet\n" +
-                "WHERE t.date_trajet < ?) AS trajet_before_date\n" +
-                "ON trajet_before_date.id_reservation = r.id\n" +
-                "WHERE trajet_before_date.id IS NULL;";
+                "WHERE t.date_trajet <= ?)";
         Object[] params = { date };
         return Reservation.fetch(Reservation.class, sql, params);
     }

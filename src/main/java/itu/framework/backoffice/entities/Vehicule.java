@@ -1,24 +1,31 @@
 package itu.framework.backoffice.entities;
 
-import legacy.annotations.*;
+import legacy.annotations.Column;
+import legacy.annotations.Entity;
+import legacy.annotations.Id;
 import legacy.schema.BaseEntity;
-import legacy.strategy.GeneratedAfterPersistence;
 
 @Entity(tableName = "vehicule")
 public class Vehicule extends BaseEntity {
+    public Vehicule() {
+        super();
+    }
+
     @Id
     @Column
-    @Generated(strategy = GeneratedAfterPersistence.class)
-    Integer id;
+    private Integer id;
 
     @Column
-    String ref;
+    private String ref;
 
     @Column(name = "nbr_place")
-    Integer nbrPlace;
+    private Integer nbrPlace;
 
     @Column(name = "type_carburant")
-    String typeCarburant;
+    private String typeCarburant;
+
+    @Column(name = "vitesse_moyenne")
+    private Double vitesseMoyenne;
 
     public Integer getId() {
         return id;
@@ -51,4 +58,13 @@ public class Vehicule extends BaseEntity {
     public void setTypeCarburant(String typeCarburant) {
         this.typeCarburant = typeCarburant;
     }
+
+    public Double getVitesseMoyenne() {
+        return vitesseMoyenne;
+    }
+
+    public void setVitesseMoyenne(Double vitesseMoyenne) {
+        this.vitesseMoyenne = vitesseMoyenne;
+    }
+
 }

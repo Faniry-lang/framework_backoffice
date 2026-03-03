@@ -26,11 +26,14 @@ public class Reservation extends BaseEntity {
     String idClient;
 
     @Column(name = "id_hotel")
-    @ForeignKey(mappedBy = "hotel", entity = Hotel.class)
+    @ForeignKey(mappedBy = "hotel", entity = Lieux.class)
     Integer idHotel;
 
     @Column(name = "date_heure_arrivee")
     LocalDateTime dateHeureArrivee;
+
+    @Column(name = "temps_attente_max")
+    Integer tempsAttenteMax;
 
     public Integer getId() {
         return id;
@@ -72,12 +75,21 @@ public class Reservation extends BaseEntity {
         this.dateHeureArrivee = dateHeureArrivee;
     }
 
+    public Integer getTempsAttenteMax() {
+        return tempsAttenteMax;
+    }
+
+    public void setTempsAttenteMax(Integer tempsAttenteMax) {
+        this.tempsAttenteMax = tempsAttenteMax;
+    }
+
     public ReservationDTO toDto() throws Exception {
         ReservationDTO dto =  new ReservationDTO();
         dto.setId_client(this.getIdClient());
         dto.setNb_passager(this.getNbPassager());
-        dto.setNom_hotel(((Hotel) this.getForeignKey("id_hotel")).getNom());
+        dto.setNom_hotel(((Lieux) this.getForeignKey("id_hotel")).getNom());
         dto.setDate_reservation(this.getDateHeureArrivee().toString());
+        dto.setTempsAttenteMax(this.getTempsAttenteMax());
         return dto;
     }
 
@@ -95,5 +107,18 @@ public class Reservation extends BaseEntity {
             dtos.add(reservation.toDto());
         }
         return dtos;
+    }
+
+    public static List<Reservation> findUnassignedByDate(LocalDate date) throws Exception {
+        String sql = "SELECT r.*\n" +
+                "FROM reservation r LEFT JOIN\n" +
+                "(SELECT tr.*\n" +
+                "FROM trajet t JOIN trajet_reservation tr\n" +
+                "                   ON t.id = tr.id_trajet\n" +
+                "WHERE t.date_trajet < ?) AS trajet_before_date\n" +
+                "ON trajet_before_date.id_reservation = r.id\n" +
+                "WHERE trajet_before_date.id IS NULL;";
+        Object[] params = { date };
+        return Reservation.fetch(Reservation.class, sql, params);
     }
 }

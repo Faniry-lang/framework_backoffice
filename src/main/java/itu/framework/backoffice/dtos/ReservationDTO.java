@@ -11,6 +11,7 @@ public class ReservationDTO implements Serializable {
     String id_client;
     String nom_hotel;
     String date_reservation;
+    Integer tempsAttenteMax;
 
     public Integer getNb_passager() {
         return nb_passager;
@@ -45,9 +46,28 @@ public class ReservationDTO implements Serializable {
     }
 
     public String getFormatedDate() {
-        if(this.date_reservation.isEmpty() || this.date_reservation == null) {
+        if (this.date_reservation == null || this.date_reservation.isEmpty()) {
             return "N/A";
         }
         return DateFormatHelper.formatDate(this.date_reservation);
+    }
+
+    public Integer getTempsAttenteMax() {
+        return tempsAttenteMax;
+    }
+
+    public void setTempsAttenteMax(Integer tempsAttenteMax) {
+        this.tempsAttenteMax = tempsAttenteMax;
+    }
+
+    @Override
+    public String toString() {
+        return "{"
+                + "\"nb_passager\":" + (nb_passager != null ? nb_passager : "null") + ","
+                + "\"id_client\":\"" + (id_client != null ? id_client : "") + "\","
+                + "\"nom_hotel\":\"" + (nom_hotel != null ? nom_hotel : "") + "\","
+                + "\"date_reservation\":\"" + (date_reservation != null ? date_reservation : "") + "\","
+                + "\"tempsAttenteMax\":" + (tempsAttenteMax != null ? tempsAttenteMax : "null")
+                + "}";
     }
 }

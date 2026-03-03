@@ -60,10 +60,18 @@
                 <a href="${pageContext.request.contextPath}/api/vehicules" class="nav-item">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M5 17h14v-5H5v5z"/>
-                        <path d="M18 17a2 2 0 100 4 2 2 0 000-4zm-12 0a2 2 0 100 4 2 2 0 000-4z"/>
+                        <path d="M18 17a2 2 0 100 4 2 2 0 000-4zm-12 0a2 2 0 000 4 2 2 0 000-4z"/>
                         <path d="M5 9L2 5h20l-3 4H5z"/>
                     </svg>
                     Véhicules
+                </a>
+                <a href="${pageContext.request.contextPath}/api/planification/form" class="nav-item">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                    Planification
                 </a>
             </nav>
 
@@ -179,6 +187,7 @@
                             <th>Hôtel</th>
                             <th class="text-right">Passagers</th>
                             <th class="text-right">Date d'arrivée</th>
+                            <th class="text-right">Trajet Assigné</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -217,13 +226,19 @@
                             </td>
                             <td class="text-right"><span style="color: var(--accent-copper); font-weight: 600;"><%= r.getNb_passager() %></span></td>
                             <td class="text-right"><span style="color: var(--text-secondary);"><%= r.getFormatedDate() %></span></td>
+                            <td class="text-right">
+                                <span style="color: var(--text-secondary);">
+                                    <%-- TODO: Implémenter la vérification d'assignation --%>
+                                    Non vérifié
+                                </span>
+                            </td>
                         </tr>
                         <%
                                 }
                             } else {
                         %>
                         <tr>
-                            <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-secondary);">
+                            <td colspan="6" style="text-align: center; padding: 2rem; color: var(--text-secondary);">>
                                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="margin-bottom: 1rem; opacity: 0.5;">
                                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                                     <line x1="16" y1="2" x2="16" y2="6"/>

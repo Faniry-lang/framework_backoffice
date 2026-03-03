@@ -1,7 +1,7 @@
 package itu.framework.backoffice.dtos;
 
 import itu.framework.backoffice.entities.Reservation;
-import itu.framework.backoffice.entities.Hotel;
+import itu.framework.backoffice.entities.Lieux;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -26,11 +26,10 @@ public class ReservationTrajetDTO implements Serializable {
             this.heureArriveeClient = reservation.getDateHeureArrivee();
 
             // Récupérer l'hôtel via la clé étrangère
-            Hotel hotel = (Hotel) reservation.getForeignKey("id_hotel");
+            Lieux hotel = (Lieux) reservation.getForeignKey("id_hotel");
             if (hotel != null) {
                 this.hotelNom = hotel.getNom();
-                // TODO: ajouter getCode() à l'entité Hotel si nécessaire
-                this.hotelCode = "HOT" + String.format("%03d", hotel.getId());
+                this.hotelCode = hotel.getCode();
             }
         } catch (Exception e) {
             // En cas d'erreur, initialiser avec des valeurs par défaut
@@ -92,5 +91,3 @@ public class ReservationTrajetDTO implements Serializable {
         this.heureArriveeClient = heureArriveeClient;
     }
 }
-
-

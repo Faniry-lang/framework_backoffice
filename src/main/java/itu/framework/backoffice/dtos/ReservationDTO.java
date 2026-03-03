@@ -3,8 +3,6 @@ package itu.framework.backoffice.dtos;
 import itu.framework.backoffice.helpers.DateFormatHelper;
 
 import java.io.Serializable;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
 
 public class ReservationDTO implements Serializable {
     Integer nb_passager;

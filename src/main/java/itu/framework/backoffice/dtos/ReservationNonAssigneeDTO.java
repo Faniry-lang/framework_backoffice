@@ -1,7 +1,7 @@
 package itu.framework.backoffice.dtos;
 
 import itu.framework.backoffice.entities.Reservation;
-import itu.framework.backoffice.entities.Hotel;
+import itu.framework.backoffice.entities.Lieux;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
@@ -28,7 +28,7 @@ public class ReservationNonAssigneeDTO implements Serializable {
             this.tempsAttenteMax = reservation.getTempsAttenteMax() != null ? reservation.getTempsAttenteMax() : 30;
 
             // Récupérer l'hôtel via la clé étrangère
-            Hotel hotel = (Hotel) reservation.getForeignKey("id_hotel");
+            Lieux hotel = (Lieux) reservation.getForeignKey("id_hotel");
             if (hotel != null) {
                 this.hotelNom = hotel.getNom();
             } else {
@@ -102,5 +102,3 @@ public class ReservationNonAssigneeDTO implements Serializable {
         this.tempsAttenteMax = tempsAttenteMax;
     }
 }
-
-

@@ -1,22 +1,20 @@
 package itu.framework.backoffice.entities;
 
-import legacy.annotations.Column;
-import legacy.annotations.Entity;
-import legacy.annotations.ForeignKey;
-import legacy.annotations.Id;
+import legacy.annotations.*;
+import legacy.query.Comparator;
+import legacy.query.FilterSet;
 import legacy.schema.BaseEntity;
+import legacy.strategy.GeneratedAfterPersistence;
 
 import java.util.List;
+import java.util.ArrayList;
 
 @Entity(tableName = "trajet_reservation")
 public class TrajetReservation extends BaseEntity {
-    public TrajetReservation() {
-        super();
-    }
-
     @Id
     @Column
-    private Long id;
+    @Generated(strategy = GeneratedAfterPersistence.class)
+    private Integer id;
 
     @Column(name = "id_trajet")
     @ForeignKey(mappedBy = "trajet", entity = Trajet.class)
@@ -27,13 +25,38 @@ public class TrajetReservation extends BaseEntity {
     private Integer idReservation;
 
     @Column(name = "ordre_visite")
-    private Integer ordreVisite;
+    private Integer ordreVisite; // 1er arrêt, 2e arrêt, etc
 
-    public Long getId() {
+    public static List<TrajetReservation> findByTrajet(Integer idTrajet) throws Exception {
+        if (idTrajet == null) {
+            return new ArrayList<>();
+        }
+
+        FilterSet filters = new FilterSet();
+        filters.add("id_trajet", Comparator.EQUALS, idTrajet);
+
+        List<TrajetReservation> result = TrajetReservation.filter(TrajetReservation.class, filters);
+        return result != null ? result : new ArrayList<>();
+    }
+
+    public static List<TrajetReservation> findByReservation(Integer idReservation) throws Exception {
+        if (idReservation == null) {
+            return new ArrayList<>();
+        }
+
+        FilterSet filters = new FilterSet();
+        filters.add("id_reservation", Comparator.EQUALS, idReservation);
+
+        List<TrajetReservation> result = TrajetReservation.filter(TrajetReservation.class, filters);
+        return result != null ? result : new ArrayList<>();
+    }
+
+    // Getters et Setters
+    public Integer getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -61,12 +84,16 @@ public class TrajetReservation extends BaseEntity {
         this.ordreVisite = ordreVisite;
     }
 
-    public static List<TrajetReservation> findByTrajet(Integer idTrajet) throws Exception {
-        return TrajetReservation.findBy("id_trajet", idTrajet, TrajetReservation.class);
-    }
+    // public static List<TrajetReservation> findByTrajet(Integer idTrajet) throws
+    // Exception {
+    // return TrajetReservation.findBy("id_trajet", idTrajet,
+    // TrajetReservation.class);
+    // }
 
-    public static List<TrajetReservation> findByReservation(Integer idReservation) throws Exception {
-        return TrajetReservation.findBy("id_reservation", idReservation, TrajetReservation.class);
-    }
+    // public static List<TrajetReservation> findByReservation(Integer
+    // idReservation) throws Exception {
+    // return TrajetReservation.findBy("id_reservation", idReservation,
+    // TrajetReservation.class);
+    // }
 
 }

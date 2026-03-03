@@ -6,6 +6,7 @@ import itu.framework.backoffice.models.AssignmentResult;
 import itu.framework.backoffice.models.TrajetCandidat;
 import itu.framework.backoffice.models.TripTiming;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -74,7 +75,8 @@ public class AssignmentService {
 
         candidats.sort((c1, c2) -> Integer.compare(
                 c2.getReservations().size(),
-                c1.getReservations().size()));
+                c1.getReservations().size()
+        ));
 
         List<Trajet> trajetsCreated = new ArrayList<>();
         Set<Integer> reservationsSauvegardees = new HashSet<>();
@@ -128,7 +130,8 @@ public class AssignmentService {
             int nouvelleCapacite = capaciteTotale + candidate.getNbPassager();
             if (nouvelleCapacite <= vehicule.getNbrPlace()
                     && candidate.getDateHeureArrivee().isBefore(
-                            premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax()))) {
+                    premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax()))
+            ) {
                 groupe.add(candidate);
                 capaciteTotale = nouvelleCapacite;
             }
@@ -140,7 +143,7 @@ public class AssignmentService {
         List<String> ordreVisites = new ArrayList<>();
         ordreVisites.add(aeroport.getCode());
 
-        Double distanceTotal = 0.0;
+        BigDecimal distanceTotal = BigDecimal.ZERO;
         Lieux positionActuelle = aeroport;
 
         Set<Integer> nonVisites = new HashSet<>();
@@ -148,25 +151,24 @@ public class AssignmentService {
 
         for (Reservation reservation : groupe) {
             nonVisites.add(reservation.getId());
-            Lieux hotel = (Lieux) reservation.getForeignKey("id_hotel");
+            Lieux hotel = reservation.getForeignKey("id_hotel");
             hotelCache.put(reservation.getId(), hotel);
         }
 
         while (!nonVisites.isEmpty()) {
-            Double minDistance = Double.MAX_VALUE;
+            BigDecimal minDistance = BigDecimal.valueOf(Double.MAX_VALUE);
             Reservation plusProche = null;
             Lieux hotelPlusProche = null;
 
             for (Reservation reservation : groupe) {
-                if (!nonVisites.contains(reservation.getId()))
-                    continue;
+                if (!nonVisites.contains(reservation.getId())) continue;
 
                 Lieux hotel = hotelCache.get(reservation.getId());
                 Distance distanceObj = Distance.getDistance(positionActuelle.getCode(), hotel.getCode());
 
                 if (distanceObj != null) {
-                    Double dist = distanceObj.getDistanceKm();
-                    if (dist < minDistance) {
+                    BigDecimal dist = distanceObj.getDistanceKm();
+                    if (dist.compareTo(minDistance) < 0) {
                         minDistance = dist;
                         plusProche = reservation;
                         hotelPlusProche = hotel;
@@ -176,7 +178,7 @@ public class AssignmentService {
 
             if (plusProche != null && hotelPlusProche != null) {
                 ordreVisites.add(hotelPlusProche.getCode());
-                distanceTotal += minDistance;
+                distanceTotal = distanceTotal.add(minDistance);
                 nonVisites.remove(plusProche.getId());
                 positionActuelle = hotelPlusProche;
             } else {
@@ -184,15 +186,9 @@ public class AssignmentService {
             }
         }
 
-        // Retour à l'aéroport
-        Distance retourDistance = Distance.getDistance(positionActuelle.getCode(), aeroport.getCode());
-        if (retourDistance != null) {
-            ordreVisites.add(aeroport.getCode());
-            distanceTotal += retourDistance.getDistanceKm();
-        }
 
         LocalDateTime heureDepart = groupe.get(0).getDateHeureArrivee();
-        double minutesTrajet = distanceTotal / vehicule.getVitesseMoyenne() * 60;
+        double minutesTrajet = distanceTotal.doubleValue() / vehicule.getVitesseMoyenne() * 60;
         LocalDateTime heureArrivee = heureDepart.plusMinutes((long) minutesTrajet);
 
         return new TrajetCandidat(vehicule, groupe, heureDepart, heureArrivee, distanceTotal, ordreVisites);
@@ -204,7 +200,7 @@ public class AssignmentService {
         }
         LocalDateTime heureDepart = groupe.get(0).getDateHeureArrivee();
 
-        Double distanceTotale = 0.0;
+        BigDecimal distanceTotale = BigDecimal.ZERO;
         long dureeMinutesTotale = 0;
         for (int i = 0; i < ordre.size() - 1; i++) {
             String codeFrom = ordre.get(i);
@@ -212,9 +208,9 @@ public class AssignmentService {
 
             Distance distance = Distance.getDistance(codeFrom, codeTo);
             if (distance != null) {
-                Double distanceKm = distance.getDistanceKm();
-                distanceTotale += distanceKm;
-                double dureeMinutes = distanceKm / v.getVitesseMoyenne() * 60;
+                BigDecimal distanceKm = distance.getDistanceKm();
+                distanceTotale = distanceTotale.add(distanceKm);
+                double dureeMinutes = distanceKm.doubleValue() / v.getVitesseMoyenne() * 60;
                 dureeMinutesTotale += (long) dureeMinutes;
             }
         }

@@ -32,6 +32,9 @@ public class Reservation extends BaseEntity {
     @Column(name = "date_heure_arrivee")
     LocalDateTime dateHeureArrivee;
 
+    @Column(name = "temps_attente_max")
+    Integer tempsAttenteMax; // en minutes
+
     public Integer getId() {
         return id;
     }
@@ -72,6 +75,26 @@ public class Reservation extends BaseEntity {
         this.dateHeureArrivee = dateHeureArrivee;
     }
 
+    public Integer getTempsAttenteMax() {
+        return tempsAttenteMax;
+    }
+
+    public void setTempsAttenteMax(Integer tempsAttenteMax) {
+        this.tempsAttenteMax = tempsAttenteMax;
+    }
+
+    /**
+     * Récupère le temps d'attente maximum effectif
+     * Si pas défini, utilise la constante par défaut
+     * @return Temps d'attente en minutes
+     */
+    public Integer getTempsAttenteMaxEffectif() {
+        if (tempsAttenteMax != null) {
+            return tempsAttenteMax;
+        }
+        return Constants.Config.getDefaultWaitTime();
+    }
+
     public ReservationDTO toDto() throws Exception {
         ReservationDTO dto =  new ReservationDTO();
         dto.setId_client(this.getIdClient());
@@ -95,5 +118,45 @@ public class Reservation extends BaseEntity {
             dtos.add(reservation.toDto());
         }
         return dtos;
+    }
+
+    /**
+     * Trouve les réservations non assignées pour une date donnée
+     * @param date La date de recherche
+     * @return Liste des réservations non assignées
+     */
+    public static List<Reservation> findUnassignedByDate(LocalDate date) throws Exception {
+        // 1. Récupérer toutes les réservations du jour
+        FilterSet filters = new FilterSet();
+        if(date != null) {
+            LocalDateTime endOfTheDay = date.atStartOfDay().plusHours(24);
+            LocalDateTime startOfTheDay = date.atStartOfDay();
+            filters.add("date_heure_arrivee", Comparator.LESS_THAN, endOfTheDay);
+            filters.add("date_heure_arrivee", Comparator.GREATER_THAN, startOfTheDay);
+        }
+        List<Reservation> allReservations = Reservation.filter(Reservation.class, filters);
+
+        if (allReservations == null || allReservations.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        // 2. Récupérer les IDs des réservations assignées
+        List<Integer> assignedIds = new ArrayList<>();
+        for (Reservation reservation : allReservations) {
+            List<itu.framework.backoffice.entities.TrajetReservation> trajets = itu.framework.backoffice.entities.TrajetReservation.findByReservation(reservation.getId());
+            if (trajets != null && !trajets.isEmpty()) {
+                assignedIds.add(reservation.getId());
+            }
+        }
+
+        // 3. Filtrer pour garder seulement les non assignées
+        List<Reservation> unassigned = new ArrayList<>();
+        for (Reservation reservation : allReservations) {
+            if (!assignedIds.contains(reservation.getId())) {
+                unassigned.add(reservation);
+            }
+        }
+
+        return unassigned;
     }
 }

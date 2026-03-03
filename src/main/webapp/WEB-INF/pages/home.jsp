@@ -50,10 +50,18 @@
                 <a href="${pageContext.request.contextPath}/api/vehicules" class="nav-item">
                     <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M5 17h14v-5H5v5z"/>
-                        <path d="M18 17a2 2 0 100 4 2 2 0 000-4zm-12 0a2 2 0 100 4 2 2 0 000-4z"/>
+                        <path d="M18 17a2 2 0 100 4 2 2 0 000-4zm-12 0a2 2 0 000 4 2 2 0 000-4z"/>
                         <path d="M5 9L2 5h20l-3 4H5z"/>
                     </svg>
                     Véhicules
+                </a>
+                <a href="${pageContext.request.contextPath}/api/planification/form" class="nav-item">
+                    <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                        <line x1="8" y1="21" x2="16" y2="21"/>
+                        <line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                    Planification
                 </a>
             </nav>
 
@@ -99,15 +107,25 @@
                     <p style="color: var(--text-secondary); margin-bottom: 2rem;">
                         Utilisez le menu de navigation pour accéder aux différentes fonctionnalités du backoffice.
                     </p>
-                    <a href="${pageContext.request.contextPath}/api/reservations/form" class="btn primary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                            <line x1="16" y1="2" x2="16" y2="6"/>
-                            <line x1="8" y1="2" x2="8" y2="6"/>
-                            <line x1="3" y1="10" x2="21" y2="10"/>
-                        </svg>
-                        Créer une Réservation
-                    </a>
+                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                        <a href="${pageContext.request.contextPath}/api/reservations/form" class="btn primary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                                <line x1="16" y1="2" x2="16" y2="6"/>
+                                <line x1="8" y1="2" x2="8" y2="6"/>
+                                <line x1="3" y1="10" x2="21" y2="10"/>
+                            </svg>
+                            Créer une Réservation
+                        </a>
+                        <a href="${pageContext.request.contextPath}/api/planification/form" class="btn secondary" style="display: inline-flex; align-items: center; gap: 0.5rem; text-decoration: none;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                <line x1="8" y1="21" x2="16" y2="21"/>
+                                <line x1="12" y1="17" x2="12" y2="21"/>
+                            </svg>
+                            Planifier les Trajets
+                        </a>
+                    </div>
                 </div>
             </div>
 

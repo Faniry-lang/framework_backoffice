@@ -1,14 +1,13 @@
 package itu.framework.backoffice.models;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class TripTiming {
     private final LocalDateTime heureDepart;
     private final LocalDateTime heureArrivee;
-    private final BigDecimal distanceTotale;
+    private final Double distanceTotale;
 
-    public TripTiming(LocalDateTime heureDepart, LocalDateTime heureArrivee, BigDecimal distanceTotale) {
+    public TripTiming(LocalDateTime heureDepart, LocalDateTime heureArrivee, Double distanceTotale) {
         this.heureDepart = heureDepart;
         this.heureArrivee = heureArrivee;
         this.distanceTotale = distanceTotale;
@@ -22,7 +21,7 @@ public class TripTiming {
         return heureArrivee;
     }
 
-    public BigDecimal getDistanceTotale() {
+    public Double getDistanceTotale() {
         return distanceTotale;
     }
 }

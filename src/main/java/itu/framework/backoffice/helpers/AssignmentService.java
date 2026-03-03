@@ -11,7 +11,8 @@ import java.util.Comparator;
 public class AssignmentService {
 
     public static AssignmentResult assignVehicles(LocalDate date) throws Exception {
-        // 1. Récupérer réservations non assignées du jour, trier par dateHeureArrivee ASC
+        // 1. Récupérer réservations non assignées du jour, trier par dateHeureArrivee
+        // ASC
         List<Reservation> reservationsNonAssignees = Reservation.findUnassignedByDate(date);
         reservationsNonAssignees.sort(Comparator.comparing(Reservation::getDateHeureArrivee));
 
@@ -24,7 +25,8 @@ public class AssignmentService {
 
         // 3. Pour chaque véhicule, essayer de créer un trajet
         for (Vehicule vehicule : vehicules) {
-            if (reservationsRestantes.isEmpty()) break;
+            if (reservationsRestantes.isEmpty())
+                break;
 
             // Vérifier si le véhicule est déjà assigné pour cette date
             if (Trajet.findByVehiculeAndDate(vehicule.getId(), date) != null) {
@@ -33,7 +35,7 @@ public class AssignmentService {
 
             // Grouper les réservations compatibles pour ce véhicule
             List<Reservation> reservationsGroupees = grouperReservationsCompatibles(
-                reservationsRestantes, vehicule, date);
+                    reservationsRestantes, vehicule, date);
 
             if (!reservationsGroupees.isEmpty()) {
                 // Créer le trajet
@@ -59,7 +61,6 @@ public class AssignmentService {
         LocalDateTime derniereArrivee = null;
 
         Integer maxPassagers = Constants.Config.getMaxPassengersPerVehicle();
-        Integer bufferTime = Constants.Config.getPlanningTimeBuffer();
 
         for (Reservation reservation : reservations) {
             // Vérifier la capacité
@@ -71,7 +72,7 @@ public class AssignmentService {
             // Vérifier la compatibilité temporelle
             if (derniereArrivee != null) {
                 long minutesDifference = java.time.Duration.between(
-                    derniereArrivee, reservation.getDateHeureArrivee()).toMinutes();
+                        derniereArrivee, reservation.getDateHeureArrivee()).toMinutes();
 
                 // Si trop d'écart, ne pas grouper
                 if (Math.abs(minutesDifference) > reservation.getTempsAttenteMaxEffectif()) {
@@ -99,8 +100,10 @@ public class AssignmentService {
     /**
      * Crée un trajet pour un véhicule et des réservations groupées
      */
-    private static Trajet creerTrajet(Vehicule vehicule, List<Reservation> reservations, LocalDate date) throws Exception {
-        if (reservations.isEmpty()) return null;
+    private static Trajet creerTrajet(Vehicule vehicule, List<Reservation> reservations, LocalDate date)
+            throws Exception {
+        if (reservations.isEmpty())
+            return null;
 
         // Créer le trajet
         Trajet trajet = new Trajet();
@@ -140,8 +143,8 @@ public class AssignmentService {
 
         // Ajouter les hôtels des réservations
         for (Reservation reservation : reservations) {
-            Hotel hotel = (Hotel) reservation.getForeignKey("id_hotel");
-            if (hotel != null && hotel.getCode() != null && !hotel.isAeroport()) {
+            Lieux hotel = (Lieux) reservation.getForeignKey("id_hotel");
+            if (hotel != null && hotel.getCode() != null && !hotel.getAeroport()) {
                 codes.add(hotel.getCode());
             }
         }
@@ -155,15 +158,17 @@ public class AssignmentService {
     /**
      * Calcule les horaires et distance totale du trajet
      */
-    private static void calculerHorairesEtDistance(Trajet trajet, Vehicule vehicule, List<Reservation> reservations) throws Exception {
+    private static void calculerHorairesEtDistance(Trajet trajet, Vehicule vehicule, List<Reservation> reservations)
+            throws Exception {
         String[] etapes = trajet.getOrdreVisites().split(",");
-        if (etapes.length < 2) return;
+        if (etapes.length < 2)
+            return;
 
         // Prendre l'heure d'arrivée la plus tardive comme référence
         LocalDateTime heureReference = reservations.stream()
-            .map(Reservation::getDateHeureArrivee)
-            .max(LocalDateTime::compareTo)
-            .orElse(LocalDateTime.now());
+                .map(Reservation::getDateHeureArrivee)
+                .max(LocalDateTime::compareTo)
+                .orElse(LocalDateTime.now());
 
         // Calculer le temps total nécessaire
         int tempsTotal = 0;
@@ -174,7 +179,8 @@ public class AssignmentService {
             String codeTo = etapes[i + 1].trim();
 
             // Distance
-            Double distance = Distance.getDistanceOrDefault(codeFrom, codeTo, 20.0);
+            Distance distanceObj = Distance.getDistance(codeFrom, codeTo);
+            Double distance = distanceObj != null ? distanceObj.getDistanceKm() : 20.0;
             distanceTotale += distance;
 
             // Temps de trajet
@@ -186,9 +192,8 @@ public class AssignmentService {
             // Temps d'arrêt
             if (i < etapes.length - 2) { // Pas d'arrêt à la dernière étape
                 boolean isAeroport = "AERO01".equals(codeTo);
-                int tempsArret = isAeroport ?
-                    Constants.Config.getAeroportStopTime() :
-                    Constants.Config.getHotelStopTime();
+                int tempsArret = isAeroport ? Constants.Config.getAeroportStopTime()
+                        : Constants.Config.getHotelStopTime();
                 tempsTotal += tempsArret;
             }
         }

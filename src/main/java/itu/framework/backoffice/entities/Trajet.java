@@ -1,16 +1,5 @@
 package itu.framework.backoffice.entities;
 
-import legacy.annotations.Column;
-import legacy.annotations.Entity;
-import legacy.annotations.ForeignKey;
-import legacy.annotations.Id;
-import legacy.query.Comparator;
-import legacy.query.FilterSet;
-import legacy.schema.BaseEntity;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.math.BigDecimal;
 import legacy.annotations.*;
 import legacy.query.Comparator;
 import legacy.query.FilterSet;

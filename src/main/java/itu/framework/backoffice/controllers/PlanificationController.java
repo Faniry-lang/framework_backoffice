@@ -8,7 +8,6 @@ import itu.framework.backoffice.entities.Trajet;
 import itu.framework.backoffice.entities.Reservation;
 import itu.framework.backoffice.entities.TrajetReservation;
 import itu.framework.backoffice.helpers.AssignmentService;
-import itu.framework.backoffice.helpers.AssignmentResult;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -30,8 +29,9 @@ public class PlanificationController {
             // 1. Récupérer date du paramètre (parse en LocalDate)
             LocalDate dateLocalDate = LocalDate.parse(date);
 
-            // 2. Exécuter AssignmentService.assignVehicles(date)
-            AssignmentResult result = AssignmentService.assignVehicles(dateLocalDate);
+            // 2. Exécuter AssignmentService.assignVehicles(date) - results used via
+            // Trajet.findByDate
+            AssignmentService.assignVehicles(dateLocalDate);
 
             // 3. Récupérer tous trajets créés pour cette date via Trajet.findByDate(date)
             List<Trajet> trajets = Trajet.findByDate(dateLocalDate);
@@ -48,7 +48,8 @@ public class PlanificationController {
                 trajetsDetails.add(dto);
             }
 
-            // 5. Récupérer réservations non assignées via Reservation.findUnassignedByDate(date)
+            // 5. Récupérer réservations non assignées via
+            // Reservation.findUnassignedByDate(date)
             List<Reservation> reservationsNonAssigneesList = Reservation.findUnassignedByDate(dateLocalDate);
 
             // 6. Créer ReservationNonAssigneeDTO pour chaque
@@ -72,4 +73,3 @@ public class PlanificationController {
         }
     }
 }
-

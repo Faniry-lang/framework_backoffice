@@ -1,0 +1,6 @@
+-Améliorer la fonction groupReservations pour prendre en compte toutes les reservations
+dont l'heure d'arrivée est la même
+    -classe: AssignmentService
+        -methode: groupReservations
+
+

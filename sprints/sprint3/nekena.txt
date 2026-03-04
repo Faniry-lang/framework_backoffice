@@ -1,0 +1,289 @@
+
+TL: Nekena 3231
+Dev: manjaka 3062, faniry 3173
+
+DEV =>> FANIRY
+
+-Conception:
+    -Créer migration V3__sprint3.sql:
+        -Modifier table vehicule:
+            -Ajouter colonne: vitesse_moyenne DECIMAL(5,2) DEFAULT 60.0
+            -UPDATE données existantes: attribuer vitesses moyennes (50-70 km/h selon type)
+
+        -Modifier table hotel:
+            -Ajouter colonnes: code VARCHAR(10) UNIQUE, aeroport BOOLEAN DEFAULT FALSE
+            -Ajouter index sur code
+            -UPDATE données existantes: attribuer codes aux hotels ('HOT001', 'HOT002', etc)
+            -Insérer 1 aéroport (nom='Aéroport Ivato', code='AERO01', aeroport=TRUE)
+
+        -Créer table distance:
+            -Colonnes: id SERIAL PK, code_from VARCHAR(10), code_to VARCHAR(10), distance_km DECIMAL(10,2)
+            -Index sur (code_from, code_to)
+            -Insérer distances entre tous les lieux (aéroport ↔ hotels, hotels ↔ hotels)
+
+        -Modifier table reservation:
+            -Ajouter colonnes: temps_attente_max INT DEFAULT 30 (minutes)
+            -Note: Tous les trajets sont ALLER uniquement (Aéroport → Hôtel)
+
+        -Créer table trajet:
+            -Colonnes:
+                * id SERIAL PK
+                * id_vehicule INT (FK vers vehicule)
+                * date_trajet DATE
+                * heure_depart TIMESTAMP
+                * heure_arrivee TIMESTAMP
+                * distance_totale DECIMAL(10,2)
+                * ordre_visites TEXT (JSON ou CSV: "AERO01,HOT001,HOT002,AERO01")
+            -Index sur (id_vehicule, date_trajet)
+
+        -Créer table trajet_reservation (table association):
+            -Colonnes:
+                * id SERIAL PK
+                * id_trajet INT (FK vers trajet)
+                * id_reservation INT (FK vers reservation)
+                * ordre_visite INT (1er arrêt, 2e arrêt, etc)
+            -Index sur (id_trajet, id_reservation)
+
+-Métier - Entités:
+    -Créer entité Lieux (ou modifier Hotel):
+        -Champs: id (Integer), nom (String), code (String), aeroport (Boolean)
+        -Annotations: @Entity(tableName = "hotel"), @Id, @Column
+        -Méthode statique getAeroport():
+            * FilterSet avec aeroport = true
+            * Retourne Lieux (premier résultat)
+        -Getters/Setters: getId(), getNom(), getCode(), getAeroport()
+
+    -Créer entité Distance:
+        -Champs: id (Integer), codeFrom (String), codeTo (String), distanceKm (Double)
+        -Annotations: @Entity(tableName = "distance"), @Id, @Column
+        -Méthode statique getDistance(String from, String to):
+            * FilterSet bidirectionnelle: (code_from = from AND code_to = to) OR (code_from = to AND code_to = from)
+            * Retourne Distance ou null
+        -Getters/Setters: getId(), getCodeFrom(), getCodeTo(), getDistanceKm()
+
+    -Modifier entité Vehicule:
+        -Ajouter champ: vitesseMoyenne (Double)
+        -Getter/Setter: getVitesseMoyenne(), setVitesseMoyenne()
+
+    -Modifier entité Reservation:
+        -Ajouter champ: tempsAttenteMax (Integer) - en minutes
+        -Méthode statique findUnassignedByDate(LocalDate date):
+            * Retourne réservations non présentes dans trajet_reservation pour cette date
+        -Getter/Setter: getTempsAttenteMax(), setTempsAttenteMax()
+
+    -Créer entité Trajet:
+        -Champs: id (Integer), idVehicule (Integer), dateTrajet (LocalDate), heureDepart (LocalDateTime), heureArrivee (LocalDateTime), distanceTotale (Double), ordreVisites (String)
+        -Annotations: @Entity(tableName = "trajet"), @Id, @Column, @ForeignKey
+        -Méthode statique findByVehiculeAndDate(Integer idVehicule, LocalDate date)
+        -Méthode getReservations(): récupère via TrajetReservation
+        -Getters/Setters complets
+
+    -Créer entité TrajetReservation:
+        -Champs: id (Integer), idTrajet (Integer), idReservation (Integer), ordreVisite (Integer)
+        -Annotations: @Entity(tableName = "trajet_reservation"), @Id, @Column, @ForeignKey
+        -Méthodes statiques pour recherche par trajet ou réservation
+        -Getters/Setters complets
+
+-Métier - Service d'assignation:
+    -Créer classe AssignmentConstants:
+        -Constantes: FUEL_PRIORITY = ["D", "ES", "H", "EL"]
+
+    -Créer classe TrajetCandidat (classe interne):
+        -Champs: vehicule, reservations (List), heureDepart, heureArrivee, distanceTotale, ordreVisites (List<String>)
+        -Représente un trajet potentiel avant enregistrement
+
+    -Créer classe AssignmentService:
+        -Méthode principale assignVehicles(LocalDate date):
+            1. Récupérer réservations non assignées du jour, trier par dateHeureArrivee ASC
+            2. Récupérer tous véhicules
+            3. Pour chaque véhicule:
+                - Essayer de grouper un maximum de réservations compatibles
+                - Calculer le meilleur trajet multi-destinations
+                - Créer TrajetCandidat si au moins 1 réservation
+            4. Trier candidats par nombre de réservations DESC (maximiser occupation)
+            5. Assigner les trajets et marquer réservations comme assignées
+            6. Retourner AssignmentResult(trajets créés, réservations non assignées)
+
+        -Méthode groupReservations(Vehicule vehicule, List<Reservation> disponibles):
+            * Algorithme de groupement:
+                1. Prendre 1ère réservation (la plus tôt)
+                2. Vérifier si autres réservations peuvent être ajoutées:
+                   - Capacité totale <= vehicule.getNbrPlace()
+                   - Heure arrivée client dans fenêtre de temps d'attente
+                3. Retourner groupe compatible
+
+        -Méthode optimizeRoute(List<Reservation> groupe, Lieux aeroport):
+            * Algorithme de l'ordre optimal:
+                1. Point départ: aéroport
+                2. Pour chaque réservation, trouver hôtel le plus proche non encore visité
+                3. Construire ordre: AERO01 → HOT003 → HOT001 → AERO01
+                4. Calculer distance totale et horaires
+            * Retourne TrajetCandidat
+
+        -Méthode calculateTripTiming(Vehicule v, List<Reservation> groupe, List<String> ordre):
+            * Calcul des horaires détaillés:
+                - Départ aéroport = heure arrivée du 1er client
+                - Pour chaque segment: durée = distance_km / vitesseMoyenne * 60
+                - Arrivée finale = départ + somme durées
+            * Retourne (heureDepart, heureArrivee, distanceTotale)
+
+        -Méthode findBestVehicle(Reservation reservation, List<Vehicule> disponibles):
+            -Filtrer véhicules avec nbrPlace >= reservation.getNbPassager()
+            -Si plusieurs: choisir capacité la plus proche
+            -Si égalité: priorité carburant D > ES > H > EL
+            -Retourner Vehicule ou null
+
+        -Méthode saveTrajet(TrajetCandidat candidat):
+            1. Créer et sauver Trajet
+            2. Pour chaque réservation du groupe: créer TrajetReservation avec ordreVisite
+            3. Commit transaction
+
+    -Créer classe AssignmentResult:
+        -Champs: trajetsCreated (List<Trajet>), reservationsNonAssignees (List<Reservation>)
+        -Getters/Setters
+
+
+DEV =>> MANJAKA
+
+-Métier - DTOs:
+    -Créer ReservationTrajetDTO:
+        -Champs:
+            * reservationId (Integer)
+            * idClient (String)
+            * nbPassager (Integer)
+            * hotelNom (String)
+            * hotelCode (String)
+            * heureArriveeClient (LocalDateTime)
+        -Constructeur: ReservationTrajetDTO(Reservation reservation)
+
+    -Créer TrajetDetailDTO:
+        -Champs:
+            * trajetId (Integer)
+            * vehiculeRef (String)
+            * nbrPlace (Integer)
+            * reservations (List<ReservationTrajetDTO>)
+            * nbPassagersTotal (Integer) - somme de tous les passagers
+            * heureDepart (LocalDateTime)
+            * heureArrivee (LocalDateTime)
+            * distanceTotale (Double)
+            * ordreVisites (List<String>) - ["AERO01", "HOT001", "HOT002", "AERO01"]
+            * detailTrajetFormate (String) - "Aéroport → Hilton → Carlton → Aéroport"
+        -Méthodes helpers:
+            * getFormattedDepart(): String (format "HH:mm")
+            * getFormattedArrivee(): String (format "HH:mm")
+            * getFormattedDuree(): String (format "2h 15min")
+        -Constructeur: TrajetDetailDTO(Trajet trajet, List<TrajetReservation> liens)
+
+    -Créer ReservationNonAssigneeDTO:
+        -Champs:
+            * reservationId (Integer)
+            * idClient (String)
+            * nbPassager (Integer)
+            * hotelNom (String)
+            * heureArriveeClient (LocalDateTime)
+            * tempsAttenteMax (Integer)
+        -Méthode helper: getFormattedHeure(): String
+        -Constructeur: ReservationNonAssigneeDTO(Reservation reservation)
+
+-Métier - Controller:
+    -Créer PlanificationController (@Controller("/api/planification")):
+        -@GetMapping("/form"): afficher formulaire sélection date
+
+        -@PostMapping("/assign"):
+            1. Récupérer date du paramètre (parse en LocalDate)
+            2. Exécuter AssignmentService.assignVehicles(date)
+            3. Récupérer tous trajets créés pour cette date via Trajet.findByDate(date)
+            4. Pour chaque trajet:
+                - Récupérer véhicule
+                - Récupérer réservations via TrajetReservation.findByTrajet(trajet.getId())
+                - Créer TrajetDetailDTO
+            5. Récupérer réservations non assignées via Reservation.findUnassignedByDate(date)
+            6. Créer ReservationNonAssigneeDTO pour chaque
+            7. Passer en attributs: trajetsDetails (List<TrajetDetailDTO>), reservationsNonAssignees (List<ReservationNonAssigneeDTO>), dateSelectionnee (String)
+            8. Afficher planification-view.jsp
+
+-Affichage - JSP:
+    -Créer planification/planification-form.jsp:
+        -Copier template de reservation-form.jsp
+        -Formulaire simple: input type="date" + bouton "Lancer l'assignation"
+        -Action: POST /api/planification/assign
+        -Sidebar: ajouter lien Planification
+        -Note: Le bouton lance directement l'assignation automatique
+
+    -Créer planification/planification-view.jsp:
+        -Afficher date sélectionnée en haut: "Planification du ${dateSelectionnee}"
+
+        -Section 1 "Trajets assignés" (c:forEach items="${trajetsDetails}" var="trajet"):
+            -Table avec colonnes:
+                * # (index)
+                * Véhicule (${trajet.vehiculeRef})
+                * Places (${trajet.nbrPlace})
+                * Réservations (boucle interne):
+                    - Afficher liste: "C001 (3p), C002 (2p)" = ${trajet.reservations}
+                    - Total: ${trajet.nbPassagersTotal} passagers
+                * Départ (${trajet.formattedDepart})
+                * Arrivée (${trajet.formattedArrivee})
+                * Durée (${trajet.formattedDuree})
+                * Distance (${trajet.distanceTotale} km)
+                * Détail Trajet (${trajet.detailTrajetFormate})
+            -Style: une ligne par trajet/véhicule
+
+        -Section 2 "Réservations non assignées" (c:forEach items="${reservationsNonAssignees}" var="res"):
+            -Si liste vide: afficher message "Toutes les réservations sont assignées ✓"
+            -Sinon, table avec colonnes:
+                * # (index)
+                * Client ID (${res.idClient})
+                * Passagers (${res.nbPassager})
+                * Hôtel (${res.hotelNom})
+                * Arrivée Client (${res.formattedHeure})
+                * Attente Max (${res.tempsAttenteMax} min)
+            -Style: ligne en jaune clair pour indiquer réservation en attente
+
+        -Boutons:
+            -"Nouvelle Date" (GET /api/planification/form)
+            -"Voir toutes les Réservations" (GET /api/reservation/form)
+
+        -Note: Pas de bouton "Assigner" car fait automatiquement lors de la sélection de date
+
+-Affichage - Mise à jour navigation:
+    -Modifier reservation-form.jsp:
+        -Ajouter lien "Planification" dans sidebar (href="/api/planification/form")
+        -Ajouter colonne "Trajet Assigné" (afficher "Oui" si réservation dans trajet_reservation)
+
+    -Modifier home.jsp:
+        -Ajouter lien Planification dans sidebar
+        -Ajouter bouton "Planifier les Trajets"
+
+    -Modifier tous les JSP (vehicule-*.jsp, error.jsp):
+        -Ajouter lien Planification dans sidebar
+
+-Tests:
+    -Migration: vérifier tables créées, données insérées
+    -Données test:
+        * Créer 5 réservations pour même date avec heures rapprochées (10:00, 10:15, 10:30, 12:00, 14:00)
+        * Créer distances entre aéroport et 3 hôtels
+        * Assigner vitesses moyennes aux véhicules
+    -Planification Flow:
+        1. Accéder à /api/planification/form
+        2. Soumettre date → vérifier assignation automatique
+        3. Vérifier affichage: trajets avec détails complets
+        4. Vérifier groupement: réservations 10:00, 10:15, 10:30 dans même trajet si capacité suffit
+        5. Vérifier ordre optimal: hôtels visités du plus proche au plus loin
+    -Règles métier:
+        * Capacité totale ne dépasse pas véhicule
+        * Temps d'attente respecté
+        * Ordre des visites optimisé (plus proche d'abord)
+        * Priorité carburant D>ES>H>EL
+    -Cas limites:
+        * Plus de réservations que capacité totale flotte
+        * Réservations avec fenêtres de temps incompatibles
+        * Vérifier retour aéroport dans ordre_visites
+
+
+NOTES IMPORTANTES:
+-Un véhicule peut transporter plusieurs réservations dans UN trajet
+-Le trajet fait: Aéroport → Hôtel1 → Hôtel2 → ... → Aéroport
+-L'ordre des hôtels est optimisé (plus proche d'abord)
+-Temps d'attente = fenêtre pendant laquelle on peut grouper des réservations
+-Vitesse moyenne est une constante globale
+-Une fois un trajet créé, le véhicule n'est plus disponible ce jour

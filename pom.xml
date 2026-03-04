@@ -34,7 +34,6 @@
             <version>1.0-SNAPSHOT</version>
         </dependency>
 
-
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
@@ -158,7 +157,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <mainClass>com.test.Main</mainClass>
+                    <mainClass>itu.framework.backoffice.Main</mainClass>
                 </configuration>
             </plugin>
         </plugins>

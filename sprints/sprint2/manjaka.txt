@@ -1,0 +1,36 @@
+==== Securisation API ====
+-Conception:
+    -créer table token_client:
+        -id (serial pk)
+        -token (text)
+        -date_expiration (timestamp)
+
+-métier
+    -créer entité TokenClient
+        -id (int)
+            -generated
+        -token (String)
+            -generated, strategy= UUIDStrategy.class
+         -dateExpiration (LocalDateTime)
+
+    -Créer une classe TokenTest avec une fonction public static void main(String[] args)
+
+    -Créer fonction dans l'entité Token pour tester validité token:
+        -public static boolean isTokenValid(String token) {}
+
+    -Tester création de token
+        -TokenClient tokenClient = new TokenClient();
+            tokenClient.setDateExpiration(xxx)
+            tokenClient.save() // le champ token sera auto généré
+        -afficher le token généré dans le terminal et stocker quelque part
+
+    -Créer endpoint "/protected" dans HomeController
+        @GetMapping("/protected")
+        @Json
+        public String getProtected(@RequestBody RequestDto body) {}
+
+        -classe RequestDto
+            -String token
+            -String message
+        -l'endpoint renvoie le message si token toujours valide
+        -sinon renvoie "Token expiré"

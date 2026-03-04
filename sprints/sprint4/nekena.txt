@@ -1,0 +1,19 @@
+-Améliorer l'algorithme de recherche d'ordre de visite pour prendre en compte les distances
+via la méthode du plus proche voisin, on cherche d'abord l'hotel le plus proche de l'aeroport puis
+l'hotel le plus proche du précédent etc.
+-classe: AssignmentService
+    -methode: optimizeRoute
+    
+-Modifier la fonction saveTrajet pour ne pas insérer en base les trajets crées
+-Modifier AssignmentResult en ajoutant attribut:
+    Map<Trajet, TrajetReservation>
+-La fonction saveTrajet va construire la liste des trajets crée (non persité en base) et populer la map
+
+-Créer endpoint POST "/save" dans PlanificationController recevant une d'objet Trajet et une map de Trajet, TrajetReservation
+    qui va persisté tout ça en base
+
+-Modifier planification-view:
+    -modification de assignVehicles necessaire
+    -ajouter une section Trajet planifiés affichant la liste des trajets pour la date en input depuis la base de donnée
+    -modifier l'affichage des trajets générés obtenus à partir de AssignmentResult.getTrajetCreated pour ajouter au tableau
+    un bouton sauvegarder sur chaque ligne et un bouton sauvegarder tous en bas du tableau

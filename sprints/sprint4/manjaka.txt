@@ -1,5 +1,6 @@
--Améliorer l'algorithme de recherche d'ordre de visite pour prendre en compte les distances
-via la méthode du plus proche voisin, on cherche d'abord l'hotel le plus proche de l'aeroport puis
-l'hotel le plus proche du précédent etc.
--classe: AssignmentService
-    -methode: optimizeRoute
+-Améliorer la fonction groupReservations pour prendre en compte toutes les reservations
+dont l'heure d'arrivée est la même
+    -classe: AssignmentService
+        -methode: groupReservations
+
+

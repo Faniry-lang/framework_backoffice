@@ -50,10 +50,10 @@ ON trajet_reservation(id_trajet);
 UPDATE hotel SET code = 'HOT001' WHERE nom = 'Carlton';
 
 INSERT INTO hotel (nom, code, aeroport) VALUES
-('Ivato', 'HOT002', true);
+('Ivato', 'AER001', true);
 
 INSERT INTO distance (code_from, code_to, distance_km) VALUES
-('HOT001', 'HOT002', 273);
+('HOT001', 'AER001', 273);
 
 SELECT * FROM reservation
 WHERE id NOT IN

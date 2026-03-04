@@ -102,17 +102,17 @@
                 <p>Résultat de l'assignation automatique des véhicules</p>
             </div>
 
-            <!-- Section 1: Trajets assignés -->
+            <!-- Section 1: Trajets planifiés (en base de données) -->
             <div class="card" style="margin-bottom: 2rem;">
                 <div class="card-header">
-                    <h3 class="card-title">Trajets Assignés</h3>
-                    <p class="card-description">Liste des trajets planifiés avec leurs réservations</p>
+                    <h3 class="card-title">Trajets Planifiés</h3>
+                    <p class="card-description">Trajets sauvegardés en base de données</p>
                 </div>
 
                 <%
                     @SuppressWarnings("unchecked")
-                    List<TrajetDetailDTO> trajetsDetails = (List<TrajetDetailDTO>) request.getAttribute("trajetsDetails");
-                    if (trajetsDetails != null && !trajetsDetails.isEmpty()) {
+                    List<TrajetDetailDTO> trajetsPlanifies = (List<TrajetDetailDTO>) request.getAttribute("trajetsPlanifies");
+                    if (trajetsPlanifies != null && !trajetsPlanifies.isEmpty()) {
                 %>
                 <div class="table-container">
                     <table class="market-table">
@@ -131,10 +131,10 @@
                         </thead>
                         <tbody>
                             <%
-                                for (int i = 0; i < trajetsDetails.size(); i++) {
-                                    TrajetDetailDTO trajet = trajetsDetails.get(i);
+                                for (int i = 0; i < trajetsPlanifies.size(); i++) {
+                                    TrajetDetailDTO trajet = trajetsPlanifies.get(i);
                             %>
-                            <tr>
+                            <tr style="background: rgba(16, 185, 129, 0.1);">
                                 <td><%= i + 1 %></td>
                                 <td><strong><%= trajet.getVehiculeRef() %></strong></td>
                                 <td><%= trajet.getNbrPlace() %></td>
@@ -180,6 +180,110 @@
                         <line x1="12" y1="17" x2="12" y2="21"/>
                     </svg>
                     <p>Aucun trajet planifié pour cette date</p>
+                </div>
+                <%
+                    }
+                %>
+            </div>
+
+            <!-- Section 2: Trajets générés (non encore sauvegardés) -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="card-header">
+                    <h3 class="card-title">Trajets Générés</h3>
+                    <p class="card-description">Trajets proposés par l'algorithme d'optimisation</p>
+                </div>
+
+                <%
+                    @SuppressWarnings("unchecked")
+                    List<TrajetDetailDTO> trajetsGeneres = (List<TrajetDetailDTO>) request.getAttribute("trajetsGeneres");
+                    if (trajetsGeneres != null && !trajetsGeneres.isEmpty()) {
+                %>
+                <div class="table-container">
+                    <table class="market-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Véhicule</th>
+                                <th>Places</th>
+                                <th>Réservations</th>
+                                <th>Départ</th>
+                                <th>Arrivée</th>
+                                <th>Durée</th>
+                                <th>Distance</th>
+                                <th>Détail Trajet</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <%
+                                for (int i = 0; i < trajetsGeneres.size(); i++) {
+                                    TrajetDetailDTO trajet = trajetsGeneres.get(i);
+                            %>
+                            <tr style="background: rgba(59, 130, 246, 0.1);">
+                                <td><%= i + 1 %></td>
+                                <td><strong><%= trajet.getVehiculeRef() %></strong></td>
+                                <td><%= trajet.getNbrPlace() %></td>
+                                <td>
+                                    <%
+                                        if (trajet.getReservations() != null && !trajet.getReservations().isEmpty()) {
+                                            StringBuilder reservationsText = new StringBuilder();
+                                            for (int j = 0; j < trajet.getReservations().size(); j++) {
+                                                ReservationTrajetDTO res = trajet.getReservations().get(j);
+                                                if (j > 0) reservationsText.append(", ");
+                                                reservationsText.append(res.getIdClient()).append(" (").append(res.getNbPassager()).append("p)");
+                                            }
+                                    %>
+                                    <%= reservationsText.toString() %><br>
+                                    <small style="color: var(--text-secondary);">Total: <%= trajet.getNbPassagersTotal() %> passagers</small>
+                                    <%
+                                        } else {
+                                    %>
+                                    <span style="color: var(--text-secondary);">Aucune réservation</span>
+                                    <%
+                                        }
+                                    %>
+                                </td>
+                                <td><%= trajet.getFormattedDepart() %></td>
+                                <td><%= trajet.getFormattedArrivee() %></td>
+                                <td><%= trajet.getFormattedDuree() %></td>
+                                <td><%= trajet.getDistanceTotale() %> km</td>
+                                <td><%= trajet.getDetailTrajetFormate() %></td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" onclick="saveTrajet(<%= i %>)" data-index="<%= i %>">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                                            <polyline points="17 21 17 13 7 13 7 21"/>
+                                            <polyline points="7 3 7 8 15 8"/>
+                                        </svg>
+                                        Sauvegarder
+                                    </button>
+                                </td>
+                            </tr>
+                            <%
+                                }
+                            %>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="form-actions" style="margin-top: 1rem;">
+                    <button class="btn btn-primary" onclick="saveAllTrajets()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                            <polyline points="17 21 17 13 7 13 7 21"/>
+                            <polyline points="7 3 7 8 15 8"/>
+                        </svg>
+                        Sauvegarder Tous
+                    </button>
+                </div>
+                <%
+                    } else {
+                %>
+                <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+                    <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom: 1rem;">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                    </svg>
+                    <p>Aucun nouveau trajet généré</p>
                 </div>
                 <%
                     }
@@ -264,6 +368,110 @@
             </div>
         </main>
     </div>
+
+    <script>
+        const trajetsData = [
+            <%
+                if (trajetsGeneres != null && !trajetsGeneres.isEmpty()) {
+                    for (int i = 0; i < trajetsGeneres.size(); i++) {
+                        TrajetDetailDTO trajet = trajetsGeneres.get(i);
+            %>
+            {
+                trajet: {
+                    idVehicule: <%= trajet.getIdVehicule() %>,
+                    dateTrajet: '<%= trajet.getDateTrajet() %>',
+                    heureDepart: '<%= trajet.getHeureDepart() %>',
+                    heureArrivee: '<%= trajet.getHeureArrivee() %>',
+                    distanceTotale: <%= trajet.getDistanceTotale() %>,
+                    ordreVisites: '<%= trajet.getOrdreVisites() %>'
+                },
+                reservations: [
+                    <%
+                        if (trajet.getReservations() != null) {
+                            for (int j = 0; j < trajet.getReservations().size(); j++) {
+                                ReservationTrajetDTO res = trajet.getReservations().get(j);
+                    %>
+                    {
+                        idReservation: <%= res.getIdReservation() %>,
+                        ordreVisite: <%= res.getOrdreVisite() %>
+                    }<%= j < trajet.getReservations().size() - 1 ? "," : "" %>
+                    <%
+                            }
+                        }
+                    %>
+                ]
+            }<%= i < trajetsGeneres.size() - 1 ? "," : "" %>
+            <%
+                    }
+                }
+            %>
+        ];
+        
+        const dateValue = '${dateValue}';
+
+        function saveTrajet(index) {
+            if (!trajetsData[index]) {
+                alert('Données du trajet introuvables');
+                return;
+            }
+
+            const data = {
+                trajet: trajetsData[index].trajet,
+                reservations: trajetsData[index].reservations,
+                date: dateValue
+            };
+
+            fetch('${pageContext.request.contextPath}/api/planification/save', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = '${pageContext.request.contextPath}/api/planification/assign?date=' + dateValue;
+                } else {
+                    alert('Erreur lors de la sauvegarde du trajet');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la sauvegarde du trajet');
+            });
+        }
+
+        function saveAllTrajets() {
+            if (trajetsData.length === 0) {
+                alert('Aucun trajet à sauvegarder');
+                return;
+            }
+
+            const data = {
+                trajets: trajetsData,
+                date: dateValue
+            };
+
+            fetch('${pageContext.request.contextPath}/api/planification/save-all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                if (response.ok) {
+                    window.location.href = '${pageContext.request.contextPath}/api/planification/assign?date=' + dateValue;
+                } else {
+                    alert('Erreur lors de la sauvegarde des trajets');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur:', error);
+                alert('Erreur lors de la sauvegarde des trajets');
+            });
+        }
+    </script>
 
     <script src="${pageContext.request.contextPath}/assets/js/templatemo-crypto-script.js"></script>
 </body>

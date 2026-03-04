@@ -78,6 +78,7 @@ public class AssignmentService {
                 c1.getReservations().size()));
 
         List<Trajet> trajetsCreated = new ArrayList<>();
+        Map<Trajet, TrajetReservation[]> trajetReservationsMap = new HashMap<>();
         Set<Integer> reservationsSauvegardees = new HashSet<>();
 
         for (TrajetCandidat candidat : candidats) {
@@ -90,8 +91,11 @@ public class AssignmentService {
             }
 
             if (toutesDisponibles && !candidat.getReservations().isEmpty()) {
-                Trajet trajet = saveTrajet(candidat, date);
+                Trajet trajet = createTrajet(candidat, date);
+                TrajetReservation[] trajetReservations = createTrajetReservations(candidat, trajet);
+
                 trajetsCreated.add(trajet);
+                trajetReservationsMap.put(trajet, trajetReservations);
 
                 for (Reservation r : candidat.getReservations()) {
                     reservationsSauvegardees.add(r.getId());
@@ -106,7 +110,7 @@ public class AssignmentService {
             }
         }
 
-        return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
+        return new AssignmentResult(trajetsCreated, reservationsNonAssignees, trajetReservationsMap);
     }
 
     private List<Reservation> groupReservations(Vehicule vehicule, LocalDate date, List<Reservation> disponibles)
@@ -291,7 +295,7 @@ public class AssignmentService {
         return Integer.MAX_VALUE;
     }
 
-    private Trajet saveTrajet(TrajetCandidat candidat, LocalDate date) throws Exception {
+    private Trajet createTrajet(TrajetCandidat candidat, LocalDate date) {
         Trajet trajet = new Trajet();
         trajet.setIdVehicule(candidat.getVehicule().getId());
         trajet.setDateTrajet(date);
@@ -300,20 +304,23 @@ public class AssignmentService {
         trajet.setDistanceTotale(candidat.getDistanceTotale());
         trajet.setOrdreVisites(String.join(",", candidat.getOrdreVisites()));
 
-        trajet = (Trajet) trajet.save();
+        return trajet;
+    }
 
+    private TrajetReservation[] createTrajetReservations(TrajetCandidat candidat, Trajet trajet) {
         List<Reservation> reservations = candidat.getReservations();
+        TrajetReservation[] trajetReservations = new TrajetReservation[reservations.size()];
+
         for (int i = 0; i < reservations.size(); i++) {
             Reservation reservation = reservations.get(i);
 
             TrajetReservation tr = new TrajetReservation();
-            tr.setIdTrajet(trajet.getId().intValue());
             tr.setIdReservation(reservation.getId());
             tr.setOrdreVisite(i + 1);
 
-            tr.save();
+            trajetReservations[i] = tr;
         }
 
-        return trajet;
+        return trajetReservations;
     }
 }

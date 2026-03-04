@@ -207,7 +207,6 @@ public class AssignmentService {
         LocalDateTime heureArrivee = heureDepart.plusMinutes((long) minutesTrajet);
 
         return new TrajetCandidat(vehicule, groupe, heureDepart, heureArrivee, distanceTotal, ordreVisites);
-
     }
 
     private TripTiming calculateTripTiming(Vehicule v, List<Reservation> groupe, List<String> ordre) throws Exception {

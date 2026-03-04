@@ -131,13 +131,14 @@ public class AssignmentService {
             Reservation candidate = disponibles.get(i);
             int nouvelleCapacite = capaciteTotale + candidate.getNbPassager();
             if ( nouvelleCapacite <= vehicule.getNbrPlace()
-// decommenter pour sprint 4
+// decommenter pour sprint futur lorsque TEMPS ATTENTE pris en compte
 //                    && candidate.getDateHeureArrivee().isBefore(
 //                        premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax())
 //                    )
-                    && candidate.getDateHeureArrivee().equals(
-                        premiere.getDateHeureArrivee()
-                    )
+// decommenter pour sprint 4
+//                    && candidate.getDateHeureArrivee().equals(
+//                        premiere.getDateHeureArrivee()
+//                    )
                     && !vehicule.estOccupe(trajets, premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax()))
             ) {
                 groupe.add(candidate);
@@ -203,6 +204,7 @@ public class AssignmentService {
 //
 //        return new TrajetCandidat(vehicule, groupe, heureDepart, heureArrivee, distanceTotal, ordreVisites);
 
+        // ===== supprimer pour sprint 4 =====
         List<String> ordreVisite = new ArrayList<>();
         ordreVisite.add(aeroport.getCode());
         for(Reservation reservation : groupe) {
@@ -224,6 +226,7 @@ public class AssignmentService {
         LocalDateTime heureArrivee = heureDepart.plusMinutes((long) minutesTrajet);
 
         return new TrajetCandidat(vehicule, groupe, heureDepart, heureArrivee, distanceTotal, ordreVisite);
+        // ===== supprimer pour sprint 4 =====
     }
 
     private TripTiming calculateTripTiming(Vehicule v, List<Reservation> groupe, List<String> ordre) throws Exception {

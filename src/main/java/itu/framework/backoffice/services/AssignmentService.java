@@ -75,8 +75,7 @@ public class AssignmentService {
 
         candidats.sort((c1, c2) -> Integer.compare(
                 c2.getReservations().size(),
-                c1.getReservations().size()
-        ));
+                c1.getReservations().size()));
 
         List<Trajet> trajetsCreated = new ArrayList<>();
         Set<Integer> reservationsSauvegardees = new HashSet<>();
@@ -110,7 +109,8 @@ public class AssignmentService {
         return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
     }
 
-    private List<Reservation> groupReservations(Vehicule vehicule, LocalDate date, List<Reservation> disponibles) throws Exception {
+    private List<Reservation> groupReservations(Vehicule vehicule, LocalDate date, List<Reservation> disponibles)
+            throws Exception {
         List<Reservation> groupe = new ArrayList<>();
         if (disponibles.isEmpty()) {
             return groupe;
@@ -130,17 +130,17 @@ public class AssignmentService {
         for (int i = 1; i < disponibles.size(); i++) {
             Reservation candidate = disponibles.get(i);
             int nouvelleCapacite = capaciteTotale + candidate.getNbPassager();
-            if ( nouvelleCapacite <= vehicule.getNbrPlace()
-// decommenter pour sprint futur lorsque TEMPS ATTENTE pris en compte
-//                    && candidate.getDateHeureArrivee().isBefore(
-//                        premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax())
-//                    )
-// decommenter pour sprint 4
-//                    && candidate.getDateHeureArrivee().equals(
-//                        premiere.getDateHeureArrivee()
-//                    )
-                    && !vehicule.estOccupe(trajets, premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax()))
-            ) {
+            if (nouvelleCapacite <= vehicule.getNbrPlace()
+                    // decommenter pour sprint futur lorsque TEMPS ATTENTE pris en compte
+                    // && candidate.getDateHeureArrivee().isBefore(
+                    // premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax())
+                    // )
+                    // decommenter pour sprint 4
+                    // && candidate.getDateHeureArrivee().equals(
+                    // premiere.getDateHeureArrivee()
+                    // )
+                    && !vehicule.estOccupe(trajets,
+                            premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax()))) {
                 groupe.add(candidate);
                 capaciteTotale = nouvelleCapacite;
             }
@@ -149,84 +149,61 @@ public class AssignmentService {
     }
 
     private TrajetCandidat optimizeRoute(Vehicule vehicule, List<Reservation> groupe, Lieux aeroport) throws Exception {
-//         A decommenter pour sprint 4
-//        List<String> ordreVisites = new ArrayList<>();
-//        ordreVisites.add(aeroport.getCode());
-//
-//        BigDecimal distanceTotal = BigDecimal.ZERO;
-//        Lieux positionActuelle = aeroport;
-//
-//        Set<Integer> nonVisites = new HashSet<>();
-//        Map<Integer, Lieux> hotelCache = new HashMap<>();
-//
-//        for (Reservation reservation : groupe) {
-//            nonVisites.add(reservation.getId());
-//            Lieux hotel = reservation.getForeignKey("id_hotel");
-//            hotelCache.put(reservation.getId(), hotel);
-//        }
-//
-//        while (!nonVisites.isEmpty()) {
-//            BigDecimal minDistance = BigDecimal.valueOf(Double.MAX_VALUE);
-//            Reservation plusProche = null;
-//            Lieux hotelPlusProche = null;
-//
-//            for (Reservation reservation : groupe) {
-//                if (!nonVisites.contains(reservation.getId())) continue;
-//
-//                Lieux hotel = hotelCache.get(reservation.getId());
-//                Distance distanceObj = Distance.getDistance(positionActuelle.getCode(), hotel.getCode());
-//
-//                if (distanceObj != null) {
-//                    BigDecimal dist = distanceObj.getDistanceKm();
-//                    if (dist.compareTo(minDistance) < 0) {
-//                        minDistance = dist;
-//                        plusProche = reservation;
-//                        hotelPlusProche = hotel;
-//                    }
-//                }
-//            }
-//
-//            if (plusProche != null && hotelPlusProche != null) {
-//                ordreVisites.add(hotelPlusProche.getCode());
-//                distanceTotal = distanceTotal.add(minDistance);
-//                nonVisites.remove(plusProche.getId());
-//                positionActuelle = hotelPlusProche;
-//            } else {
-//                break;
-//            }
-//        }
-//
-//        ordreVisites.add(aeroport.getCode());
-//
-//        LocalDateTime heureDepart = groupe.get(0).getDateHeureArrivee();
-//        double minutesTrajet = distanceTotal.doubleValue() / vehicule.getVitesseMoyenne() * 60;
-//        LocalDateTime heureArrivee = heureDepart.plusMinutes((long) minutesTrajet);
-//
-//        return new TrajetCandidat(vehicule, groupe, heureDepart, heureArrivee, distanceTotal, ordreVisites);
-
-        // ===== supprimer pour sprint 4 =====
-        List<String> ordreVisite = new ArrayList<>();
-        ordreVisite.add(aeroport.getCode());
-        for(Reservation reservation : groupe) {
-            ordreVisite.add(((Lieux) reservation.getForeignKey("id_hotel")).getCode());
-        }
-
-        ordreVisite.add(aeroport.getCode());
+        List<String> ordreVisites = new ArrayList<>();
+        ordreVisites.add(aeroport.getCode());
 
         BigDecimal distanceTotal = BigDecimal.ZERO;
-        String previous = ordreVisite.get(0);
-        for(int i = 1; i < ordreVisite.size(); i++) {
-            Distance d = Distance.getDistance(previous, ordreVisite.get(i));
-            distanceTotal.add(d.getDistanceKm());
-            previous = ordreVisite.get(i);
+        Lieux positionActuelle = aeroport;
+
+        Set<Integer> nonVisites = new HashSet<>();
+        Map<Integer, Lieux> hotelCache = new HashMap<>();
+
+        for (Reservation reservation : groupe) {
+            nonVisites.add(reservation.getId());
+            Lieux hotel = reservation.getForeignKey("id_hotel");
+            hotelCache.put(reservation.getId(), hotel);
         }
+
+        while (!nonVisites.isEmpty()) {
+            BigDecimal minDistance = BigDecimal.valueOf(Double.MAX_VALUE);
+            Reservation plusProche = null;
+            Lieux hotelPlusProche = null;
+
+            for (Reservation reservation : groupe) {
+                if (!nonVisites.contains(reservation.getId()))
+                    continue;
+
+                Lieux hotel = hotelCache.get(reservation.getId());
+                Distance distanceObj = Distance.getDistance(positionActuelle.getCode(), hotel.getCode());
+
+                if (distanceObj != null) {
+                    BigDecimal dist = distanceObj.getDistanceKm();
+                    if (dist.compareTo(minDistance) < 0) {
+                        minDistance = dist;
+                        plusProche = reservation;
+                        hotelPlusProche = hotel;
+                    }
+                }
+            }
+
+            if (plusProche != null && hotelPlusProche != null) {
+                ordreVisites.add(hotelPlusProche.getCode());
+                distanceTotal = distanceTotal.add(minDistance);
+                nonVisites.remove(plusProche.getId());
+                positionActuelle = hotelPlusProche;
+            } else {
+                break;
+            }
+        }
+
+        ordreVisites.add(aeroport.getCode());
 
         LocalDateTime heureDepart = groupe.get(0).getDateHeureArrivee();
         double minutesTrajet = distanceTotal.doubleValue() / vehicule.getVitesseMoyenne() * 60;
         LocalDateTime heureArrivee = heureDepart.plusMinutes((long) minutesTrajet);
 
-        return new TrajetCandidat(vehicule, groupe, heureDepart, heureArrivee, distanceTotal, ordreVisite);
-        // ===== supprimer pour sprint 4 =====
+        return new TrajetCandidat(vehicule, groupe, heureDepart, heureArrivee, distanceTotal, ordreVisites);
+
     }
 
     private TripTiming calculateTripTiming(Vehicule v, List<Reservation> groupe, List<String> ordre) throws Exception {

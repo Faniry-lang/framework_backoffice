@@ -136,9 +136,9 @@ public class AssignmentService {
                     // premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax())
                     // )
                     // decommenter pour sprint 4
-                    // && candidate.getDateHeureArrivee().equals(
-                    // premiere.getDateHeureArrivee()
-                    // )
+                    && candidate.getDateHeureArrivee().equals(
+                    premiere.getDateHeureArrivee()
+                    )
                     && !vehicule.estOccupe(trajets,
                             premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax()))) {
                 groupe.add(candidate);

@@ -75,10 +75,10 @@ public class AssignmentService {
 
         candidats.sort((c1, c2) -> Integer.compare(
                 c2.getReservations().size(),
-                c1.getReservations().size()
-        ));
+                c1.getReservations().size()));
 
         List<Trajet> trajetsCreated = new ArrayList<>();
+        Map<Trajet, TrajetReservation[]> trajetReservationsMap = new HashMap<>();
         Set<Integer> reservationsSauvegardees = new HashSet<>();
 
         for (TrajetCandidat candidat : candidats) {
@@ -91,8 +91,11 @@ public class AssignmentService {
             }
 
             if (toutesDisponibles && !candidat.getReservations().isEmpty()) {
-                Trajet trajet = saveTrajet(candidat, date);
+                Trajet trajet = createTrajet(candidat, date);
+                TrajetReservation[] trajetReservations = createTrajetReservations(candidat, trajet);
+
                 trajetsCreated.add(trajet);
+                trajetReservationsMap.put(trajet, trajetReservations);
 
                 for (Reservation r : candidat.getReservations()) {
                     reservationsSauvegardees.add(r.getId());
@@ -107,10 +110,11 @@ public class AssignmentService {
             }
         }
 
-        return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
+        return new AssignmentResult(trajetsCreated, reservationsNonAssignees, trajetReservationsMap);
     }
 
-    private List<Reservation> groupReservations(Vehicule vehicule, LocalDate date, List<Reservation> disponibles) throws Exception {
+    private List<Reservation> groupReservations(Vehicule vehicule, LocalDate date, List<Reservation> disponibles)
+            throws Exception {
         List<Reservation> groupe = new ArrayList<>();
         if (disponibles.isEmpty()) {
             return groupe;
@@ -130,17 +134,17 @@ public class AssignmentService {
         for (int i = 1; i < disponibles.size(); i++) {
             Reservation candidate = disponibles.get(i);
             int nouvelleCapacite = capaciteTotale + candidate.getNbPassager();
-            if ( nouvelleCapacite <= vehicule.getNbrPlace()
-// decommenter pour sprint futur lorsque TEMPS ATTENTE pris en compte
-//                    && candidate.getDateHeureArrivee().isBefore(
-//                        premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax())
-//                    )
-// decommenter pour sprint 4
-//                    && candidate.getDateHeureArrivee().equals(
-//                        premiere.getDateHeureArrivee()
-//                    )
-                    && !vehicule.estOccupe(trajets, premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax()))
-            ) {
+            if (nouvelleCapacite <= vehicule.getNbrPlace()
+                    // decommenter pour sprint futur lorsque TEMPS ATTENTE pris en compte
+                    // && candidate.getDateHeureArrivee().isBefore(
+                    // premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax())
+                    // )
+                    // decommenter pour sprint 4
+                    // && candidate.getDateHeureArrivee().equals(
+                    // premiere.getDateHeureArrivee()
+                    // )
+                    && !vehicule.estOccupe(trajets,
+                            premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax()))) {
                 groupe.add(candidate);
                 capaciteTotale = nouvelleCapacite;
             }
@@ -170,7 +174,8 @@ public class AssignmentService {
             Lieux hotelPlusProche = null;
 
             for (Reservation reservation : groupe) {
-                if (!nonVisites.contains(reservation.getId())) continue;
+                if (!nonVisites.contains(reservation.getId()))
+                    continue;
 
                 Lieux hotel = hotelCache.get(reservation.getId());
                 Distance distanceObj = Distance.getDistance(positionActuelle.getCode(), hotel.getCode());
@@ -289,7 +294,7 @@ public class AssignmentService {
         return Integer.MAX_VALUE;
     }
 
-    private Trajet saveTrajet(TrajetCandidat candidat, LocalDate date) throws Exception {
+    private Trajet createTrajet(TrajetCandidat candidat, LocalDate date) {
         Trajet trajet = new Trajet();
         trajet.setIdVehicule(candidat.getVehicule().getId());
         trajet.setDateTrajet(date);
@@ -298,20 +303,23 @@ public class AssignmentService {
         trajet.setDistanceTotale(candidat.getDistanceTotale());
         trajet.setOrdreVisites(String.join(",", candidat.getOrdreVisites()));
 
-        trajet = (Trajet) trajet.save();
+        return trajet;
+    }
 
+    private TrajetReservation[] createTrajetReservations(TrajetCandidat candidat, Trajet trajet) {
         List<Reservation> reservations = candidat.getReservations();
+        TrajetReservation[] trajetReservations = new TrajetReservation[reservations.size()];
+
         for (int i = 0; i < reservations.size(); i++) {
             Reservation reservation = reservations.get(i);
 
             TrajetReservation tr = new TrajetReservation();
-            tr.setIdTrajet(trajet.getId().intValue());
             tr.setIdReservation(reservation.getId());
             tr.setOrdreVisite(i + 1);
 
-            tr.save();
+            trajetReservations[i] = tr;
         }
 
-        return trajet;
+        return trajetReservations;
     }
 }

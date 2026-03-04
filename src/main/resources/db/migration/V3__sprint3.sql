@@ -55,11 +55,9 @@ INSERT INTO hotel (nom, code, aeroport) VALUES
 INSERT INTO distance (code_from, code_to, distance_km) VALUES
 ('HOT001', 'HOT002', 273);
 
-SELECT r.*
-FROM reservation r LEFT JOIN
-(SELECT tr.*
+SELECT * FROM reservation
+WHERE id NOT IN
+(SELECT tr.id_reservation
 FROM trajet t JOIN trajet_reservation tr
                    ON t.id = tr.id_trajet
-WHERE t.date_trajet < CURRENT_DATE) AS trajet_before_date
-ON trajet_before_date.id_reservation = r.id
-WHERE trajet_before_date.id IS NULL;
+WHERE t.date_trajet <= CURRENT_DATE)

@@ -6,6 +6,7 @@ import itu.framework.backoffice.entities.Vehicule;
 import itu.framework.backoffice.entities.Reservation;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.Duration;
@@ -20,7 +21,7 @@ public class TrajetDetailDTO implements Serializable {
     private Integer nbPassagersTotal; // somme de tous les passagers
     private LocalDateTime heureDepart;
     private LocalDateTime heureArrivee;
-    private Double distanceTotale;
+    private BigDecimal distanceTotale;
     private List<String> ordreVisites; // ["AERO01", "HOT001", "HOT002", "AERO01"]
     private String detailTrajetFormate; // "Aéroport → Hilton → Carlton → Aéroport"
 
@@ -173,11 +174,11 @@ public class TrajetDetailDTO implements Serializable {
         this.heureArrivee = heureArrivee;
     }
 
-    public Double getDistanceTotale() {
+    public BigDecimal getDistanceTotale() {
         return distanceTotale;
     }
 
-    public void setDistanceTotale(Double distanceTotale) {
+    public void setDistanceTotale(BigDecimal distanceTotale) {
         this.distanceTotale = distanceTotale;
     }
 

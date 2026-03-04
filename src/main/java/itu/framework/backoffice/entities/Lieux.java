@@ -9,7 +9,6 @@ import legacy.schema.BaseEntity;
 
 import java.util.List;
 
-
 @Entity(tableName = "hotel")
 public class Lieux extends BaseEntity {
     public Lieux() {
@@ -18,7 +17,7 @@ public class Lieux extends BaseEntity {
 
     @Id
     @Column
-    private Long id;
+    private Integer id;
 
     @Column
     private String nom;
@@ -26,14 +25,14 @@ public class Lieux extends BaseEntity {
     @Column
     private String code;
 
-    @Column(name="aeroport")
+    @Column(name = "aeroport")
     private Boolean aeroport;
 
-    public Long getId() {
+    public Integer getId() {
         return id;
     }
 
-    public void setId(Long id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 
@@ -69,5 +68,11 @@ public class Lieux extends BaseEntity {
             return lieux.get(0);
         }
         return null;
+    }
+
+    public static List<Lieux> findHotels() throws Exception {
+        FilterSet filterSet = new FilterSet();
+        filterSet.add("aeroport", Comparator.EQUALS, false);
+        return Lieux.filter(Lieux.class, filterSet);
     }
 }

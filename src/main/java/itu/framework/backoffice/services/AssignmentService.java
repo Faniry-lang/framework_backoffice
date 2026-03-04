@@ -232,6 +232,7 @@ public class AssignmentService {
     }
 
     private Vehicule findBestVehicle(Reservation reservation, List<Vehicule> disponibles) {
+        System.out.println("MIDITRA");
         if (reservation == null || disponibles == null || disponibles.isEmpty()) {
             return null;
         }
@@ -244,6 +245,7 @@ public class AssignmentService {
             }
         }
 
+        System.out.println("TONGA VEHICULE COMPATIBLE");
         if (vehiculesCompatibles.isEmpty()) {
             return null;
         }
@@ -261,20 +263,44 @@ public class AssignmentService {
                 meilleurCapacite.add(v);
             }
         }
+        System.out.println("TONGA MEILLEUR CAPCATIE");
         if (meilleurCapacite.size() == 1) {
             return meilleurCapacite.get(0);
         }
+
         Vehicule meilleur = meilleurCapacite.get(0);
         int meilleurePriorite = getFuelPriority(meilleur.getTypeCarburant());
+        int[] priorites = new int[meilleurCapacite.size()];
+        priorites[0] = getFuelPriority(meilleur.getTypeCarburant());
 
         for (int i = 1; i < meilleurCapacite.size(); i++) {
             Vehicule candidat = meilleurCapacite.get(i);
             int prioriteCandidat = getFuelPriority(candidat.getTypeCarburant());
-
+            priorites[i] = prioriteCandidat;
             if (prioriteCandidat < meilleurePriorite) {
                 meilleur = candidat;
                 meilleurePriorite = prioriteCandidat;
             }
+        }
+
+        int nbrMemePriorite = 0;
+        int precedent = priorites[0];
+        for(int i = 1; i < priorites.length; i++) {
+            System.out.println("[DEBUG ASSIGN] priorite["+i+"]: "+priorites[i]);
+            System.out.println("[DEBUG ASSIGN] priorite[precedent]: "+precedent);
+            if(precedent == priorites[i])  {
+                nbrMemePriorite ++;
+            }
+            precedent = priorites[i];
+        }
+
+        System.out.println("Nombre meme priorite: "+nbrMemePriorite);
+
+        int randomIndex = 0;
+        Random rand = new Random();
+        if(nbrMemePriorite == priorites.length) {
+            randomIndex = rand.nextInt(meilleurCapacite.size());
+            return meilleurCapacite.get(randomIndex);
         }
 
         return meilleur;

@@ -38,7 +38,7 @@ public class ReservationController {
 
     @GetMapping("/form")
     public ModelView showReservationForm(@RequestParam("message") String message) throws Exception {
-        List<Lieux> hotelList = Lieux.findAll(Lieux.class);
+        List<Lieux> hotelList = Lieux.findHotels();
         List<Reservation> reservations = Reservation.findAll(Reservation.class);
         List<ReservationDTO> reservationDTOList = new java.util.ArrayList<>();
         for (Reservation reservation : reservations) {

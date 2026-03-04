@@ -69,4 +69,10 @@ public class Lieux extends BaseEntity {
         }
         return null;
     }
+
+    public static List<Lieux> findHotels() throws Exception {
+        FilterSet filterSet = new FilterSet();
+        filterSet.add("aeroport", Comparator.EQUALS, false);
+        return Lieux.filter(Lieux.class, filterSet);
+    }
 }

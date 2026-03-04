@@ -31,6 +31,9 @@ public class PlanificationController {
             AssignmentService assignmentService = new AssignmentService();
             AssignmentResult result = assignmentService.assignVehicles(dateLocalDate);
             List<Trajet> trajets = result.getTrajetsCreated();
+            if(trajets.isEmpty()) {
+                trajets = Trajet.findBy("date_trajet", dateLocalDate, Trajet.class);
+            }
             List<TrajetDetailDTO> trajetsDetails = new ArrayList<>();
 
             for (Trajet trajet : trajets) {

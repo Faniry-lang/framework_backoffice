@@ -115,7 +115,7 @@
                     if (trajetsDetails != null && !trajetsDetails.isEmpty()) {
                 %>
                 <div class="table-container">
-                    <table class="data-table">
+                    <table class="market-table">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -209,7 +209,7 @@
                     } else {
                 %>
                 <div class="table-container">
-                    <table class="data-table">
+                    <table class="market-table">
                         <thead>
                             <tr>
                                 <th>#</th>

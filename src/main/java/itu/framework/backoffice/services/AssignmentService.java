@@ -236,6 +236,7 @@ public class AssignmentService {
             return null;
         }
 
+        // 1. Filtrer les véhicules compatibles (nombre de places suffisant)
         Integer nbPassagers = reservation.getNbPassager();
         List<Vehicule> vehiculesCompatibles = new ArrayList<>();
         for (Vehicule v : disponibles) {
@@ -248,6 +249,7 @@ public class AssignmentService {
             return null;
         }
 
+        // 2. Trouver la capacité minimale optimale (nombre de places le plus proche du nombre de passagers)
         int capaciteMin = Integer.MAX_VALUE;
         for (Vehicule v : vehiculesCompatibles) {
             if (v.getNbrPlace() < capaciteMin) {
@@ -255,39 +257,37 @@ public class AssignmentService {
             }
         }
 
+        // 3. Filtrer les véhicules avec la capacité optimale
         List<Vehicule> meilleurCapacite = new ArrayList<>();
         for (Vehicule v : vehiculesCompatibles) {
             if (v.getNbrPlace() == capaciteMin) {
                 meilleurCapacite.add(v);
             }
         }
+
+        // Si un seul véhicule, le retourner
         if (meilleurCapacite.size() == 1) {
             return meilleurCapacite.get(0);
         }
-        Vehicule meilleur = meilleurCapacite.get(0);
-        int meilleurePriorite = getFuelPriority(meilleur.getTypeCarburant());
 
-        for (int i = 1; i < meilleurCapacite.size(); i++) {
-            Vehicule candidat = meilleurCapacite.get(i);
-            int prioriteCandidat = getFuelPriority(candidat.getTypeCarburant());
-
-            if (prioriteCandidat < meilleurePriorite) {
-                meilleur = candidat;
-                meilleurePriorite = prioriteCandidat;
+        // 4. Prioriser les véhicules diesel (type carburant "D") parmi ceux avec la capacité optimale
+        List<Vehicule> vehiculesDiesel = new ArrayList<>();
+        for (Vehicule v : meilleurCapacite) {
+            if ("D".equals(v.getTypeCarburant())) {
+                vehiculesDiesel.add(v);
             }
         }
 
-        return meilleur;
-    }
+        // Si des véhicules diesel sont disponibles, utiliser uniquement ceux-ci
+        List<Vehicule> vehiculesFinaux = vehiculesDiesel.isEmpty() ? meilleurCapacite : vehiculesDiesel;
 
-    private int getFuelPriority(String typeCarburant) {
-        String[] priorities = AssignmentConstants.FUEL_PRIORITY;
-        for (int i = 0; i < priorities.length; i++) {
-            if (priorities[i].equals(typeCarburant)) {
-                return i;
-            }
+        // 5. Choix aléatoire parmi les véhicules restants
+        if (vehiculesFinaux.size() == 1) {
+            return vehiculesFinaux.get(0);
+        } else {
+            int randomIndex = new Random().nextInt(vehiculesFinaux.size());
+            return vehiculesFinaux.get(randomIndex);
         }
-        return Integer.MAX_VALUE;
     }
 
     private Trajet saveTrajet(TrajetCandidat candidat, LocalDate date) throws Exception {

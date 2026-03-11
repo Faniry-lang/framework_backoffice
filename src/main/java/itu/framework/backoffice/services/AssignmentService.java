@@ -232,61 +232,72 @@ public class AssignmentService {
     }
 
     private Vehicule findBestVehicle(Reservation reservation, List<Vehicule> disponibles) {
+        System.out.println("=== DEBUG findBestVehicle ===");
+        System.out.println("Reservation ID: " + (reservation != null ? reservation.getId() : "null"));
+        System.out.println("Nb passagers demandés: " + (reservation != null ? reservation.getNbPassager() : "null"));
+        System.out.println("Véhicules disponibles: " + (disponibles != null ? disponibles.size() : "null"));
+
         if (reservation == null || disponibles == null || disponibles.isEmpty()) {
+            System.out.println("RETOUR: null (paramètres invalides)");
             return null;
         }
 
-        // 1. Filtrer les véhicules compatibles (nombre de places suffisant)
         Integer nbPassagers = reservation.getNbPassager();
         List<Vehicule> vehiculesCompatibles = new ArrayList<>();
         for (Vehicule v : disponibles) {
+            System.out.println("  Véhicule " + v.getRef() + " - places: " + v.getNbrPlace() + ", carburant: " + v.getTypeCarburant());
             if (v.getNbrPlace() >= nbPassagers) {
                 vehiculesCompatibles.add(v);
             }
         }
 
+        System.out.println("Véhicules compatibles (places >= " + nbPassagers + "): " + vehiculesCompatibles.size());
+
         if (vehiculesCompatibles.isEmpty()) {
+            System.out.println("RETOUR: null (aucun véhicule compatible)");
             return null;
         }
 
-        // 2. Trouver la capacité minimale optimale (nombre de places le plus proche du nombre de passagers)
         int capaciteMin = Integer.MAX_VALUE;
         for (Vehicule v : vehiculesCompatibles) {
             if (v.getNbrPlace() < capaciteMin) {
                 capaciteMin = v.getNbrPlace();
             }
         }
+        System.out.println("Capacité minimale optimale: " + capaciteMin);
 
-        // 3. Filtrer les véhicules avec la capacité optimale
         List<Vehicule> meilleurCapacite = new ArrayList<>();
         for (Vehicule v : vehiculesCompatibles) {
             if (v.getNbrPlace() == capaciteMin) {
                 meilleurCapacite.add(v);
             }
         }
+        System.out.println("Véhicules avec capacité optimale: " + meilleurCapacite.size());
 
-        // Si un seul véhicule, le retourner
         if (meilleurCapacite.size() == 1) {
+            System.out.println("RETOUR: " + meilleurCapacite.get(0).getRef() + " (seul véhicule optimal)");
             return meilleurCapacite.get(0);
         }
 
-        // 4. Prioriser les véhicules diesel (type carburant "D") parmi ceux avec la capacité optimale
         List<Vehicule> vehiculesDiesel = new ArrayList<>();
         for (Vehicule v : meilleurCapacite) {
             if ("D".equals(v.getTypeCarburant())) {
                 vehiculesDiesel.add(v);
             }
         }
+        System.out.println("Véhicules diesel parmi optimaux: " + vehiculesDiesel.size());
 
-        // Si des véhicules diesel sont disponibles, utiliser uniquement ceux-ci
         List<Vehicule> vehiculesFinaux = vehiculesDiesel.isEmpty() ? meilleurCapacite : vehiculesDiesel;
+        System.out.println("Véhicules finaux pour sélection: " + vehiculesFinaux.size());
 
-        // 5. Choix aléatoire parmi les véhicules restants
         if (vehiculesFinaux.size() == 1) {
+            System.out.println("RETOUR: " + vehiculesFinaux.get(0).getRef() + " (seul véhicule final)");
             return vehiculesFinaux.get(0);
         } else {
             int randomIndex = new Random().nextInt(vehiculesFinaux.size());
-            return vehiculesFinaux.get(randomIndex);
+            Vehicule selected = vehiculesFinaux.get(randomIndex);
+            System.out.println("RETOUR: " + selected.getRef() + " (choix aléatoire index " + randomIndex + ")");
+            return selected;
         }
     }
 

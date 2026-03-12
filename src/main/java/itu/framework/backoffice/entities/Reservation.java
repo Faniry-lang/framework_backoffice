@@ -131,4 +131,10 @@ public class Reservation extends BaseEntity {
         Object[] params = { date };
         return Reservation.fetch(Reservation.class, sql, params);
     }
+
+    public boolean isWithinWaitingWindow(LocalDateTime reference, Integer maxWait) {
+        LocalDateTime start = this.dateHeureArrivee;
+        LocalDateTime end = this.dateHeureArrivee.plusMinutes(maxWait);
+        return !reference.isBefore(start) && reference.isBefore(end);
+    }
 }

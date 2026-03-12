@@ -12,6 +12,33 @@ import java.time.LocalDateTime;
 import java.util.*;
 
 public class AssignmentService {
+
+    private static class Interval {
+        LocalDateTime start;
+        LocalDateTime end;
+        Interval(LocalDateTime s, LocalDateTime e) { this.start = s; this.end = e; }
+    }
+
+    private static boolean overlaps(LocalDateTime aStart, LocalDateTime aEnd, LocalDateTime bStart, LocalDateTime bEnd) {
+        if (aStart == null || aEnd == null || bStart == null || bEnd == null) return false;
+        return !(aEnd.isBefore(bStart) || aEnd.isEqual(bStart) || aStart.isAfter(bEnd) || aStart.isEqual(bEnd));
+    }
+
+    private static boolean isVehicleFree(Integer vehiculeId, LocalDateTime start, LocalDateTime end, Map<Integer, List<Interval>> calendar) {
+        if (start == null || end == null) return false;
+        List<Interval> list = calendar.get(vehiculeId);
+        if (list == null) return true;
+        for (Interval iv : list) {
+            if (overlaps(start, end, iv.start, iv.end)) return false;
+        }
+        return true;
+    }
+
+    private static void addIntervalToCalendar(Integer vehiculeId, LocalDateTime start, LocalDateTime end, Map<Integer, List<Interval>> calendar) {
+        if (vehiculeId == null || start == null || end == null) return;
+        calendar.computeIfAbsent(vehiculeId, k -> new ArrayList<>()).add(new Interval(start, end));
+    }
+
     public AssignmentResult assignVehicles(LocalDate date) throws Exception {
         List<Reservation> reservationsDisponibles = Reservation.findUnassignedByDate(date);
         reservationsDisponibles.sort(Comparator.comparing(Reservation::getDateHeureArrivee));
@@ -21,6 +48,20 @@ public class AssignmentService {
         Lieux aeroport = Lieux.findAeroport();
         if (aeroport == null) {
             throw new Exception("Aéroport non trouvé dans la base de données");
+        }
+
+        Map<Integer, List<Interval>> occupiedCalendar = new HashMap<>();
+        for (Vehicule v : vehiculesDisponibles) {
+            try {
+                List<Trajet> trajetsExistants = v.findTrajets(date);
+                for (Trajet t : trajetsExistants) {
+                    if (t.getHeureDepart() != null && t.getHeureArrivee() != null) {
+                        addIntervalToCalendar(v.getId(), t.getHeureDepart(), t.getHeureArrivee(), occupiedCalendar);
+                    }
+                }
+            } catch (Exception e) {
+                System.out.println("[ERREUR AssignmentService.assignVehicles add to calendar] "+e.getMessage());
+            }
         }
 
         List<TrajetCandidat> candidats = new ArrayList<>();
@@ -34,24 +75,27 @@ public class AssignmentService {
                 }
             }
 
-            if (disponiblesPourTraitement.isEmpty()) {
-                break;
-            }
+            if (disponiblesPourTraitement.isEmpty()) break;
 
             Reservation premiereReservation = disponiblesPourTraitement.get(0);
 
-            Vehicule meilleurVehicule = findBestVehicle(premiereReservation, vehiculesDisponibles);
+            List<Vehicule> vehiculesCandidates = new ArrayList<>(vehiculesDisponibles);
+            boolean assignedThisReservation = false;
 
-            if (meilleurVehicule == null) {
-                reservationsAssignees.add(premiereReservation.getId());
-                continue;
-            }
+            while (!vehiculesCandidates.isEmpty() && !assignedThisReservation) {
+                Vehicule meilleurVehicule = findBestVehicle(premiereReservation, vehiculesCandidates);
+                if (meilleurVehicule == null) {
+                    reservationsAssignees.add(premiereReservation.getId());
+                    break;
+                }
 
-            List<Reservation> groupe = groupReservations(meilleurVehicule, date, disponiblesPourTraitement);
+                List<Reservation> groupe = groupReservations(meilleurVehicule, date, disponiblesPourTraitement);
+                if (groupe.isEmpty()) {
+                    vehiculesCandidates.remove(meilleurVehicule);
+                    continue;
+                }
 
-            if (!groupe.isEmpty()) {
                 TrajetCandidat candidat = optimizeRoute(meilleurVehicule, groupe, aeroport);
-
                 TripTiming timing = calculateTripTiming(meilleurVehicule, groupe, candidat.getOrdreVisites());
                 if (timing != null) {
                     candidat.setHeureDepart(timing.getHeureDepart());
@@ -59,18 +103,29 @@ public class AssignmentService {
                     candidat.setDistanceTotale(timing.getDistanceTotale());
                 }
 
-                candidats.add(candidat);
+                LocalDateTime start = candidat.getHeureDepart();
+                LocalDateTime end = candidat.getHeureArrivee();
 
-                for (Reservation r : groupe) {
-                    reservationsAssignees.add(r.getId());
+                if (isVehicleFree(meilleurVehicule.getId(), start, end, occupiedCalendar)) {
+                    candidats.add(candidat);
+                    for (Reservation r : groupe) reservationsAssignees.add(r.getId());
+                    addIntervalToCalendar(meilleurVehicule.getId(), start, end, occupiedCalendar);
+                    assignedThisReservation = true;
+                } else {
+                    vehiculesCandidates.remove(meilleurVehicule);
                 }
-
-                vehiculesDisponibles.remove(meilleurVehicule);
             }
 
-            if (vehiculesDisponibles.isEmpty()) {
-                break;
+            if (!assignedThisReservation) {
+                reservationsAssignees.add(premiereReservation.getId());
             }
+
+            boolean anyVehicleLeft = false;
+            for (Vehicule v : vehiculesDisponibles) {
+                // boucle la vehicule raha miodina le boucle de mbola misy vehicule zany
+                if (true) { anyVehicleLeft = true; break; }
+            }
+            if (!anyVehicleLeft) break;
         }
 
         candidats.sort((c1, c2) -> Integer.compare(
@@ -92,7 +147,6 @@ public class AssignmentService {
             if (toutesDisponibles && !candidat.getReservations().isEmpty()) {
                 Trajet trajet = saveTrajet(candidat, date);
                 trajetsCreated.add(trajet);
-
                 for (Reservation r : candidat.getReservations()) {
                     reservationsSauvegardees.add(r.getId());
                 }
@@ -101,9 +155,7 @@ public class AssignmentService {
 
         List<Reservation> reservationsNonAssignees = new ArrayList<>();
         for (Reservation r : reservationsDisponibles) {
-            if (!reservationsSauvegardees.contains(r.getId())) {
-                reservationsNonAssignees.add(r);
-            }
+            if (!reservationsSauvegardees.contains(r.getId())) reservationsNonAssignees.add(r);
         }
 
         return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
@@ -112,20 +164,14 @@ public class AssignmentService {
     private List<Reservation> groupReservations(Vehicule vehicule, LocalDate date, List<Reservation> disponibles)
             throws Exception {
         List<Reservation> groupe = new ArrayList<>();
-        if (disponibles.isEmpty()) {
-            return groupe;
-        }
+        if (disponibles.isEmpty()) return groupe;
 
         Reservation premiere = disponibles.get(0);
         Integer capaciteTotale = premiere.getNbPassager();
 
-        if (capaciteTotale > vehicule.getNbrPlace()) {
-            return groupe;
-        }
+        if (capaciteTotale > vehicule.getNbrPlace()) return groupe;
 
         groupe.add(premiere);
-
-        List<Trajet> trajets = vehicule.findTrajets(date);
 
         for (int i = 1; i < disponibles.size(); i++) {
             Reservation candidate = disponibles.get(i);
@@ -135,12 +181,9 @@ public class AssignmentService {
                     // && candidate.getDateHeureArrivee().isBefore(
                     // premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax())
                     // )
-                    // decommenter pour sprint 4
                     && candidate.getDateHeureArrivee().equals(
                     premiere.getDateHeureArrivee()
-                    )
-                    && !vehicule.estOccupe(trajets,
-                            premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax()))) {
+            )) {
                 groupe.add(candidate);
                 capaciteTotale = nouvelleCapacite;
             }
@@ -206,9 +249,7 @@ public class AssignmentService {
     }
 
     private TripTiming calculateTripTiming(Vehicule v, List<Reservation> groupe, List<String> ordre) throws Exception {
-        if (groupe == null || groupe.isEmpty() || ordre == null || ordre.size() < 2) {
-            return null;
-        }
+        if (groupe == null || groupe.isEmpty() || ordre == null || ordre.size() < 2) return null;
         LocalDateTime heureDepart = groupe.get(0).getDateHeureArrivee();
 
         BigDecimal distanceTotale = BigDecimal.ZERO;
@@ -232,51 +273,26 @@ public class AssignmentService {
     }
 
     private Vehicule findBestVehicle(Reservation reservation, List<Vehicule> disponibles) {
-        if (reservation == null || disponibles == null || disponibles.isEmpty()) {
-            return null;
-        }
+        if (reservation == null || disponibles == null || disponibles.isEmpty()) return null;
 
-        // 1. Filtrer les véhicules compatibles (nombre de places suffisant)
         Integer nbPassagers = reservation.getNbPassager();
         List<Vehicule> vehiculesCompatibles = new ArrayList<>();
         for (Vehicule v : disponibles) {
-            if (v.getNbrPlace() >= nbPassagers) {
-                vehiculesCompatibles.add(v);
-            }
+            if (v.getNbrPlace() >= nbPassagers) vehiculesCompatibles.add(v);
         }
 
-        if (vehiculesCompatibles.isEmpty()) {
-            return null;
-        }
+        if (vehiculesCompatibles.isEmpty()) return null;
 
-        // 2. Trouver la capacité minimale optimale (nombre de places le plus proche du nombre de passagers)
         int capaciteMin = Integer.MAX_VALUE;
-        for (Vehicule v : vehiculesCompatibles) {
-            if (v.getNbrPlace() < capaciteMin) {
-                capaciteMin = v.getNbrPlace();
-            }
-        }
+        for (Vehicule v : vehiculesCompatibles) if (v.getNbrPlace() < capaciteMin) capaciteMin = v.getNbrPlace();
 
-        // 3. Filtrer les véhicules avec la capacité optimale
         List<Vehicule> meilleurCapacite = new ArrayList<>();
-        for (Vehicule v : vehiculesCompatibles) {
-            if (v.getNbrPlace() == capaciteMin) {
-                meilleurCapacite.add(v);
-            }
-        }
+        for (Vehicule v : vehiculesCompatibles) if (v.getNbrPlace() == capaciteMin) meilleurCapacite.add(v);
 
-        // Si un seul véhicule, le retourner
-        if (meilleurCapacite.size() == 1) {
-            return meilleurCapacite.get(0);
-        }
+        if (meilleurCapacite.size() == 1) return meilleurCapacite.get(0);
 
-        // 4. Prioriser les véhicules diesel (type carburant "D") parmi ceux avec la capacité optimale
         List<Vehicule> vehiculesDiesel = new ArrayList<>();
-        for (Vehicule v : meilleurCapacite) {
-            if ("D".equals(v.getTypeCarburant())) {
-                vehiculesDiesel.add(v);
-            }
-        }
+        for (Vehicule v : meilleurCapacite) if ("D".equals(v.getTypeCarburant())) vehiculesDiesel.add(v);
 
         List<Vehicule> vehiculesFinaux;
 
@@ -292,13 +308,8 @@ public class AssignmentService {
             vehiculesFinaux = vehiculesDiesel;
         }
 
-        // 5. Choix aléatoire parmi les véhicules restants
-        if (vehiculesFinaux.size() == 1) {
-            return vehiculesFinaux.get(0);
-        } else {
-            int randomIndex = new Random().nextInt(vehiculesFinaux.size());
-            return vehiculesFinaux.get(randomIndex);
-        }
+        if (vehiculesFinaux.size() == 1) return vehiculesFinaux.get(0);
+        else return vehiculesFinaux.get(new Random().nextInt(vehiculesFinaux.size()));
     }
 
     private Trajet saveTrajet(TrajetCandidat candidat, LocalDate date) throws Exception {

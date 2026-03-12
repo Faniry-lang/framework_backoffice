@@ -1,6 +1,5 @@
 package itu.framework.backoffice.services;
 
-import itu.framework.backoffice.constantes.AssignmentConstants;
 import itu.framework.backoffice.entities.*;
 import itu.framework.backoffice.models.AssignmentResult;
 import itu.framework.backoffice.models.TrajetCandidat;
@@ -10,10 +9,12 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class AssignmentService {
-    public AssignmentResult assignVehicles(LocalDate date) throws Exception {
-        List<Reservation> reservationsDisponibles = Reservation.findUnassignedByDate(date);
+    public AssignmentResult assignVehicles(LocalDate date, Integer iteration, List<Trajet> previousTrajetCreated, List<Reservation> reservationsNonAssignees) throws Exception {
+        if(iteration == null) iteration = 0;
+        List<Reservation> reservationsDisponibles = reservationsNonAssignees != null ? reservationsNonAssignees : Reservation.findUnassignedByDate(date);
         reservationsDisponibles.sort(Comparator.comparing(Reservation::getDateHeureArrivee));
 
         List<Vehicule> vehiculesDisponibles = new ArrayList<>(Vehicule.findAll(Vehicule.class));
@@ -47,7 +48,20 @@ public class AssignmentService {
                 continue;
             }
 
-            List<Reservation> groupe = groupReservations(meilleurVehicule, date, disponiblesPourTraitement);
+            List<Trajet> trajetsBase = meilleurVehicule.findTrajets(date);
+            if(previousTrajetCreated != null) {
+                Set<Integer> ids = trajetsBase.stream()
+                        .map(Trajet::getId)
+                        .collect(Collectors.toSet());
+
+                for(Trajet t : previousTrajetCreated) {
+                    if (!ids.contains(t.getId())) {
+                        trajetsBase.add(t);
+                    }
+                }
+            }
+
+            List<Reservation> groupe = groupReservations(meilleurVehicule, trajetsBase, candidats, date, disponiblesPourTraitement);
 
             if (!groupe.isEmpty()) {
                 TrajetCandidat candidat = optimizeRoute(meilleurVehicule, groupe, aeroport);
@@ -65,12 +79,12 @@ public class AssignmentService {
                     reservationsAssignees.add(r.getId());
                 }
 
-                vehiculesDisponibles.remove(meilleurVehicule);
+//                vehiculesDisponibles.remove(meilleurVehicule);
             }
 
-            if (vehiculesDisponibles.isEmpty()) {
-                break;
-            }
+//            if (vehiculesDisponibles.isEmpty()) {
+//                break;
+//            }
         }
 
         candidats.sort((c1, c2) -> Integer.compare(
@@ -99,20 +113,31 @@ public class AssignmentService {
             }
         }
 
-        List<Reservation> reservationsNonAssignees = new ArrayList<>();
+        List<Reservation> nouvelleReservationsNonAssignees = new ArrayList<>();
         for (Reservation r : reservationsDisponibles) {
             if (!reservationsSauvegardees.contains(r.getId())) {
-                reservationsNonAssignees.add(r);
+                nouvelleReservationsNonAssignees.add(r);
             }
         }
 
-        return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
+        if(reservationsNonAssignees != null && reservationsNonAssignees.containsAll(nouvelleReservationsNonAssignees)) {
+            List<Trajet> allTrajets = previousTrajetCreated != null ? previousTrajetCreated : new ArrayList<>();
+            allTrajets.addAll(trajetsCreated);
+            return new AssignmentResult(allTrajets, nouvelleReservationsNonAssignees);
+        }
+        return assignVehicles(date, iteration+1, trajetsCreated, nouvelleReservationsNonAssignees);
     }
 
-    private List<Reservation> groupReservations(Vehicule vehicule, LocalDate date, List<Reservation> disponibles)
+    private List<Reservation> groupReservations(Vehicule vehicule, List<Trajet> trajets, List<TrajetCandidat> candidatsEnCours, LocalDate date, List<Reservation> disponibles)
             throws Exception {
         List<Reservation> groupe = new ArrayList<>();
+        if(vehicule.getRef().equals("V-002")) {
+            System.out.println("==DEBUG groupReservations==");
+        }
         if (disponibles.isEmpty()) {
+            if(vehicule.getRef().equals("V-002")) {
+                System.out.println("Disponible is Empty");
+            }
             return groupe;
         }
 
@@ -120,12 +145,23 @@ public class AssignmentService {
         Integer capaciteTotale = premiere.getNbPassager();
 
         if (capaciteTotale > vehicule.getNbrPlace()) {
+            if(vehicule.getRef().equals("V-002")) {
+                System.out.println("CapaciteTotale > vehicule.getNbrPlace() "+capaciteTotale +" > "+vehicule.getNbrPlace());
+            }
             return groupe;
         }
 
         groupe.add(premiere);
 
-        List<Trajet> trajets = vehicule.findTrajets(date);
+//        List<Trajet> trajets = vehicule.findTrajets(date);
+//        if(vehicule.getRef().equals("V-002")) {
+//            if(trajets.size() == 0) {
+//                System.out.println("Trajet est empty pour la date "+date);
+//            }
+//            for(Trajet t : trajets) {
+//                System.out.println("Trajet : ("+t.getHeureDepart()+", "+t.getHeureArrivee()+")");
+//            }
+//        }
 
         for (int i = 1; i < disponibles.size(); i++) {
             Reservation candidate = disponibles.get(i);
@@ -140,7 +176,8 @@ public class AssignmentService {
                     premiere.getDateHeureArrivee()
                     )
                     && !vehicule.estOccupe(trajets,
-                            premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax()))) {
+                            premiere.getDateHeureArrivee())
+                    && !estOccupeParCandidats(vehicule, candidatsEnCours, premiere.getDateHeureArrivee())) {
                 groupe.add(candidate);
                 capaciteTotale = nouvelleCapacite;
             }
@@ -325,5 +362,19 @@ public class AssignmentService {
         }
 
         return trajet;
+    }
+
+    private boolean estOccupeParCandidats(Vehicule vehicule, List<TrajetCandidat> candidats,
+                                          LocalDateTime heureDepart) {
+        if (candidats == null) return false;
+
+        for (TrajetCandidat c : candidats) {
+            if (c.getVehicule().getId().equals(vehicule.getId())) {
+                if (!heureDepart.isBefore(c.getHeureDepart()) && heureDepart.isBefore(c.getHeureArrivee())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

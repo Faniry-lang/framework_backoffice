@@ -29,7 +29,7 @@ public class PlanificationController {
         try {
             LocalDate dateLocalDate = LocalDate.parse(date);
             AssignmentService assignmentService = new AssignmentService();
-            AssignmentResult result = assignmentService.assignVehicles(dateLocalDate);
+            AssignmentResult result = assignmentService.assignVehicles(dateLocalDate, null, null, null);
             List<Trajet> trajets = result.getTrajetsCreated();
             if(trajets.isEmpty()) {
                 trajets = Trajet.findBy("date_trajet", dateLocalDate, Trajet.class);

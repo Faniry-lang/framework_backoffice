@@ -11,8 +11,8 @@ import java.time.LocalDate;
 public class Main {
     public static void main(String[] args) throws Exception {
 //         AssignmentService service = new AssignmentService();
-//         AssignmentResult results = service.assignVehicles(LocalDate.now());
-
+//         AssignmentResult results = service.assignVehicles(LocalDate.now(), null, null);
+//
        FrameworkRunner.run(Main.class, args);
     }
 }

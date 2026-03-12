@@ -1,0 +1,11 @@
+Branche : sprint/5/1/opti_reservation
+
+- Méthodes helper Reservation.java
+- isWithinWaitingWindow(LocalDateTime reference, Integer maxWait)
+- getPriorityScore() basé sur nb_passager
+
+- Constantes temps d'attente dans Constants.java
+- getSmartWaitTime() -> 15 min par défaut
+- getMaxWaitTime() -> 30 min maximum
+- isSmartWaitingEnabled() -> true
+

@@ -42,6 +42,7 @@ public class AssignmentService {
     public AssignmentResult assignVehicles(LocalDate date) throws Exception {
         List<Reservation> reservationsDisponibles = Reservation.findUnassignedByDate(date);
         reservationsDisponibles.sort(Comparator.comparing(Reservation::getDateHeureArrivee));
+       reservationsDisponibles.sort(Comparator.comparing(Reservation::getNbPassager).reversed());
 
         List<Vehicule> vehiculesDisponibles = new ArrayList<>(Vehicule.findAll(Vehicule.class));
 

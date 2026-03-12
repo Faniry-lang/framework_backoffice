@@ -177,6 +177,10 @@ public class AssignmentService {
             Reservation candidate = disponibles.get(i);
             int nouvelleCapacite = capaciteTotale + candidate.getNbPassager();
             if (nouvelleCapacite <= vehicule.getNbrPlace()
+                    // decommenter pour sprint futur lorsque TEMPS ATTENTE pris en compte
+                    // && candidate.getDateHeureArrivee().isBefore(
+                    // premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax())
+                    // )
                     && candidate.getDateHeureArrivee().equals(
                     premiere.getDateHeureArrivee()
             )) {

@@ -278,8 +278,19 @@ public class AssignmentService {
             }
         }
 
-        // Si des véhicules diesel sont disponibles, utiliser uniquement ceux-ci
-        List<Vehicule> vehiculesFinaux = vehiculesDiesel.isEmpty() ? meilleurCapacite : vehiculesDiesel;
+        List<Vehicule> vehiculesFinaux;
+
+        if(vehiculesDiesel.isEmpty()) {
+            List<Vehicule> vehiculeEssence = new ArrayList<>();
+            for(Vehicule v: meilleurCapacite) {
+                if("ES".equals(v.getTypeCarburant())) {
+                    vehiculeEssence.add(v);
+                }
+            }
+            vehiculesFinaux = vehiculeEssence.isEmpty() ? meilleurCapacite : vehiculeEssence;
+        } else {
+            vehiculesFinaux = vehiculesDiesel;
+        }
 
         // 5. Choix aléatoire parmi les véhicules restants
         if (vehiculesFinaux.size() == 1) {

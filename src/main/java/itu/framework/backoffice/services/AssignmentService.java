@@ -117,7 +117,7 @@ public class AssignmentService {
                     break;
                 }
 
-                List<Reservation> groupe = groupReservations(meilleurVehicule, date, disponiblesPourTraitement);
+                List<Reservation> groupe = findOptimalWaitingGroup(meilleurVehicule, disponiblesPourTraitement);
                 if (groupe.isEmpty()) {
                     vehiculesCandidates.remove(meilleurVehicule);
                     continue;
@@ -195,31 +195,125 @@ public class AssignmentService {
         return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
     }
 
-    private List<Reservation> groupReservations(Vehicule vehicule, LocalDate date, List<Reservation> disponibles)
+    private List<Reservation> findOptimalWaitingGroup(Vehicule vehicule, List<Reservation> disponibles)
             throws Exception {
-        List<Reservation> groupe = new ArrayList<>();
-        if (disponibles.isEmpty())
-            return groupe;
+        List<Reservation> groupeVide = new ArrayList<>();
+        if (vehicule == null || disponibles == null || disponibles.isEmpty())
+            return groupeVide;
 
         Reservation premiere = disponibles.get(0);
-        Integer capaciteTotale = premiere.getNbPassager();
+        if (premiere == null)
+            return groupeVide;
 
-        if (capaciteTotale > vehicule.getNbrPlace())
+        Integer nbPremiere = premiere.getNbPassager();
+        if (nbPremiere == null || nbPremiere > vehicule.getNbrPlace())
+            return groupeVide;
+
+        LocalDateTime heurePremiere = premiere.getDateHeureArrivee();
+        if (heurePremiere == null) {
+            List<Reservation> groupe = new ArrayList<>();
+            groupe.add(premiere);
+            return groupe;
+        }
+
+        LocalDateTime limiteAttente = heurePremiere.plusMinutes(premiere.getTempsAttenteMaxEffectif());
+
+        TreeSet<LocalDateTime> pointsDepart = new TreeSet<>();
+        pointsDepart.add(heurePremiere); // partir immédiatement
+        for (int i = 1; i < disponibles.size(); i++) {
+            Reservation candidate = disponibles.get(i);
+            if (candidate == null || candidate.getDateHeureArrivee() == null)
+                continue;
+            LocalDateTime heureCandidate = candidate.getDateHeureArrivee();
+            // Fenêtre glissante : on teste aussi l'option d'attendre les prochains vols
+            if (!heureCandidate.isBefore(heurePremiere) && !heureCandidate.isAfter(limiteAttente)) {
+                pointsDepart.add(heureCandidate);
+            }
+        }
+
+        List<Reservation> meilleurGroupe = new ArrayList<>();
+        int meilleurNbPassagers = -1;
+        int meilleurNbReservations = -1;
+        LocalDateTime meilleurDepart = null;
+
+        for (LocalDateTime departCandidat : pointsDepart) {
+            List<Reservation> groupeCandidat = buildGroupAtDeparture(vehicule, premiere, disponibles, departCandidat);
+            if (groupeCandidat.isEmpty())
+                continue;
+
+            int nbPassagers = 0;
+            for (Reservation reservation : groupeCandidat) {
+                if (reservation.getNbPassager() != null) {
+                    nbPassagers += reservation.getNbPassager();
+                }
+            }
+
+            boolean meilleur = false;
+            if (nbPassagers > meilleurNbPassagers) {
+                meilleur = true;
+            } else if (nbPassagers == meilleurNbPassagers
+                    && groupeCandidat.size() > meilleurNbReservations) {
+                meilleur = true;
+            } else if (nbPassagers == meilleurNbPassagers
+                    && groupeCandidat.size() == meilleurNbReservations
+                    && (meilleurDepart == null || departCandidat.isBefore(meilleurDepart))) {
+                // A score égal, on évite d'attendre inutilement
+                meilleur = true;
+            }
+
+            if (meilleur) {
+                meilleurNbPassagers = nbPassagers;
+                meilleurNbReservations = groupeCandidat.size();
+                meilleurDepart = departCandidat;
+                meilleurGroupe = groupeCandidat;
+            }
+        }
+
+        return meilleurGroupe;
+    }
+
+    private List<Reservation> buildGroupAtDeparture(Vehicule vehicule, Reservation premiere,
+            List<Reservation> disponibles, LocalDateTime departCandidat) {
+        List<Reservation> groupe = new ArrayList<>();
+        int capaciteTotale = 0;
+
+        if (premiere.getNbPassager() == null)
             return groupe;
 
         groupe.add(premiere);
+        capaciteTotale = premiere.getNbPassager();
 
+        if (capaciteTotale > vehicule.getNbrPlace())
+            return new ArrayList<>();
+
+        List<Reservation> candidates = new ArrayList<>();
         for (int i = 1; i < disponibles.size(); i++) {
             Reservation candidate = disponibles.get(i);
+            if (candidate == null || candidate.getDateHeureArrivee() == null)
+                continue;
+
+            LocalDateTime heureCandidate = candidate.getDateHeureArrivee();
+            LocalDateTime heurePremiere = premiere.getDateHeureArrivee();
+
+            if (!heureCandidate.isBefore(heurePremiere) && !heureCandidate.isAfter(departCandidat)) {
+                candidates.add(candidate);
+            }
+        }
+
+        candidates.sort(Comparator
+                .comparing(Reservation::getDateHeureArrivee)
+                .thenComparing(Reservation::getNbPassager, Comparator.nullsLast(Comparator.reverseOrder())));
+
+        for (Reservation candidate : candidates) {
+            if (candidate.getNbPassager() == null)
+                continue;
             int nouvelleCapacite = capaciteTotale + candidate.getNbPassager();
-            LocalDateTime limiteAttente = premiere.getDateHeureArrivee()
-                    .plusMinutes(premiere.getTempsAttenteMaxEffectif());
-            if (nouvelleCapacite <= vehicule.getNbrPlace()
-                    && !candidate.getDateHeureArrivee().isAfter(limiteAttente)) {
+            if (nouvelleCapacite <= vehicule.getNbrPlace()) {
                 groupe.add(candidate);
                 capaciteTotale = nouvelleCapacite;
             }
         }
+
         return groupe;
     }
 

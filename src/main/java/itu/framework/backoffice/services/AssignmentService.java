@@ -51,9 +51,24 @@ public class AssignmentService {
         calendar.computeIfAbsent(vehiculeId, k -> new ArrayList<>()).add(new Interval(start, end));
     }
 
+    private static int getPassengerPriorityScore(Reservation reservation) {
+        Integer nbPassager = reservation.getNbPassager();
+        if (nbPassager == null)
+            return 0;
+        if (nbPassager >= 5)
+            return 3;
+        if (nbPassager >= 3)
+            return 2;
+        return 1;
+    }
+
     public AssignmentResult assignVehicles(LocalDate date) throws Exception {
         List<Reservation> reservationsDisponibles = Reservation.findUnassignedByDate(date);
-        reservationsDisponibles.sort(Comparator.comparing(Reservation::getDateHeureArrivee));
+        reservationsDisponibles.sort(
+                Comparator.comparingInt(AssignmentService::getPassengerPriorityScore).reversed()
+                        .thenComparing(Reservation::getNbPassager, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(Reservation::getDateHeureArrivee,
+                                Comparator.nullsLast(Comparator.naturalOrder())));
 
         List<Vehicule> vehiculesDisponibles = new ArrayList<>(Vehicule.findAll(Vehicule.class));
 

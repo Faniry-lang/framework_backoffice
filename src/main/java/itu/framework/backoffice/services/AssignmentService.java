@@ -16,26 +16,38 @@ public class AssignmentService {
     private static class Interval {
         LocalDateTime start;
         LocalDateTime end;
-        Interval(LocalDateTime s, LocalDateTime e) { this.start = s; this.end = e; }
+
+        Interval(LocalDateTime s, LocalDateTime e) {
+            this.start = s;
+            this.end = e;
+        }
     }
 
-    private static boolean overlaps(LocalDateTime aStart, LocalDateTime aEnd, LocalDateTime bStart, LocalDateTime bEnd) {
-        if (aStart == null || aEnd == null || bStart == null || bEnd == null) return false;
+    private static boolean overlaps(LocalDateTime aStart, LocalDateTime aEnd, LocalDateTime bStart,
+            LocalDateTime bEnd) {
+        if (aStart == null || aEnd == null || bStart == null || bEnd == null)
+            return false;
         return !(aEnd.isBefore(bStart) || aEnd.isEqual(bStart) || aStart.isAfter(bEnd) || aStart.isEqual(bEnd));
     }
 
-    private static boolean isVehicleFree(Integer vehiculeId, LocalDateTime start, LocalDateTime end, Map<Integer, List<Interval>> calendar) {
-        if (start == null || end == null) return false;
+    private static boolean isVehicleFree(Integer vehiculeId, LocalDateTime start, LocalDateTime end,
+            Map<Integer, List<Interval>> calendar) {
+        if (start == null || end == null)
+            return false;
         List<Interval> list = calendar.get(vehiculeId);
-        if (list == null) return true;
+        if (list == null)
+            return true;
         for (Interval iv : list) {
-            if (overlaps(start, end, iv.start, iv.end)) return false;
+            if (overlaps(start, end, iv.start, iv.end))
+                return false;
         }
         return true;
     }
 
-    private static void addIntervalToCalendar(Integer vehiculeId, LocalDateTime start, LocalDateTime end, Map<Integer, List<Interval>> calendar) {
-        if (vehiculeId == null || start == null || end == null) return;
+    private static void addIntervalToCalendar(Integer vehiculeId, LocalDateTime start, LocalDateTime end,
+            Map<Integer, List<Interval>> calendar) {
+        if (vehiculeId == null || start == null || end == null)
+            return;
         calendar.computeIfAbsent(vehiculeId, k -> new ArrayList<>()).add(new Interval(start, end));
     }
 
@@ -60,7 +72,7 @@ public class AssignmentService {
                     }
                 }
             } catch (Exception e) {
-                System.out.println("[ERREUR AssignmentService.assignVehicles add to calendar] "+e.getMessage());
+                System.out.println("[ERREUR AssignmentService.assignVehicles add to calendar] " + e.getMessage());
             }
         }
 
@@ -75,7 +87,8 @@ public class AssignmentService {
                 }
             }
 
-            if (disponiblesPourTraitement.isEmpty()) break;
+            if (disponiblesPourTraitement.isEmpty())
+                break;
 
             Reservation premiereReservation = disponiblesPourTraitement.get(0);
 
@@ -108,7 +121,8 @@ public class AssignmentService {
 
                 if (isVehicleFree(meilleurVehicule.getId(), start, end, occupiedCalendar)) {
                     candidats.add(candidat);
-                    for (Reservation r : groupe) reservationsAssignees.add(r.getId());
+                    for (Reservation r : groupe)
+                        reservationsAssignees.add(r.getId());
                     addIntervalToCalendar(meilleurVehicule.getId(), start, end, occupiedCalendar);
                     assignedThisReservation = true;
                 } else {
@@ -123,9 +137,13 @@ public class AssignmentService {
             boolean anyVehicleLeft = false;
             for (Vehicule v : vehiculesDisponibles) {
                 // boucle la vehicule raha miodina le boucle de mbola misy vehicule zany
-                if (true) { anyVehicleLeft = true; break; }
+                if (true) {
+                    anyVehicleLeft = true;
+                    break;
+                }
             }
-            if (!anyVehicleLeft) break;
+            if (!anyVehicleLeft)
+                break;
         }
 
         candidats.sort((c1, c2) -> Integer.compare(
@@ -155,7 +173,8 @@ public class AssignmentService {
 
         List<Reservation> reservationsNonAssignees = new ArrayList<>();
         for (Reservation r : reservationsDisponibles) {
-            if (!reservationsSauvegardees.contains(r.getId())) reservationsNonAssignees.add(r);
+            if (!reservationsSauvegardees.contains(r.getId()))
+                reservationsNonAssignees.add(r);
         }
 
         return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
@@ -164,26 +183,24 @@ public class AssignmentService {
     private List<Reservation> groupReservations(Vehicule vehicule, LocalDate date, List<Reservation> disponibles)
             throws Exception {
         List<Reservation> groupe = new ArrayList<>();
-        if (disponibles.isEmpty()) return groupe;
+        if (disponibles.isEmpty())
+            return groupe;
 
         Reservation premiere = disponibles.get(0);
         Integer capaciteTotale = premiere.getNbPassager();
 
-        if (capaciteTotale > vehicule.getNbrPlace()) return groupe;
+        if (capaciteTotale > vehicule.getNbrPlace())
+            return groupe;
 
         groupe.add(premiere);
 
         for (int i = 1; i < disponibles.size(); i++) {
             Reservation candidate = disponibles.get(i);
             int nouvelleCapacite = capaciteTotale + candidate.getNbPassager();
+            LocalDateTime limiteAttente = premiere.getDateHeureArrivee()
+                    .plusMinutes(premiere.getTempsAttenteMaxEffectif());
             if (nouvelleCapacite <= vehicule.getNbrPlace()
-                    // decommenter pour sprint futur lorsque TEMPS ATTENTE pris en compte
-                    // && candidate.getDateHeureArrivee().isBefore(
-                    // premiere.getDateHeureArrivee().plusMinutes(premiere.getTempsAttenteMax())
-                    // )
-                    && candidate.getDateHeureArrivee().equals(
-                    premiere.getDateHeureArrivee()
-            )) {
+                    && !candidate.getDateHeureArrivee().isAfter(limiteAttente)) {
                 groupe.add(candidate);
                 capaciteTotale = nouvelleCapacite;
             }
@@ -249,7 +266,8 @@ public class AssignmentService {
     }
 
     private TripTiming calculateTripTiming(Vehicule v, List<Reservation> groupe, List<String> ordre) throws Exception {
-        if (groupe == null || groupe.isEmpty() || ordre == null || ordre.size() < 2) return null;
+        if (groupe == null || groupe.isEmpty() || ordre == null || ordre.size() < 2)
+            return null;
         LocalDateTime heureDepart = groupe.get(0).getDateHeureArrivee();
 
         BigDecimal distanceTotale = BigDecimal.ZERO;
@@ -273,31 +291,43 @@ public class AssignmentService {
     }
 
     private Vehicule findBestVehicle(Reservation reservation, List<Vehicule> disponibles) {
-        if (reservation == null || disponibles == null || disponibles.isEmpty()) return null;
+        if (reservation == null || disponibles == null || disponibles.isEmpty())
+            return null;
 
         Integer nbPassagers = reservation.getNbPassager();
         List<Vehicule> vehiculesCompatibles = new ArrayList<>();
         for (Vehicule v : disponibles) {
-            if (v.getNbrPlace() >= nbPassagers) vehiculesCompatibles.add(v);
+            if (v.getNbrPlace() >= nbPassagers)
+                vehiculesCompatibles.add(v);
         }
 
-        if (vehiculesCompatibles.isEmpty()) return null;
+        if (vehiculesCompatibles.isEmpty())
+            return null;
 
         int capaciteMin = Integer.MAX_VALUE;
-        for (Vehicule v : vehiculesCompatibles) if (v.getNbrPlace() < capaciteMin) capaciteMin = v.getNbrPlace();
+        for (Vehicule v : vehiculesCompatibles)
+            if (v.getNbrPlace() < capaciteMin)
+                capaciteMin = v.getNbrPlace();
 
         List<Vehicule> meilleurCapacite = new ArrayList<>();
-        for (Vehicule v : vehiculesCompatibles) if (v.getNbrPlace() == capaciteMin) meilleurCapacite.add(v);
+        for (Vehicule v : vehiculesCompatibles)
+            if (v.getNbrPlace() == capaciteMin)
+                meilleurCapacite.add(v);
 
-        if (meilleurCapacite.size() == 1) return meilleurCapacite.get(0);
+        if (meilleurCapacite.size() == 1)
+            return meilleurCapacite.get(0);
 
         List<Vehicule> vehiculesDiesel = new ArrayList<>();
-        for (Vehicule v : meilleurCapacite) if ("D".equals(v.getTypeCarburant())) vehiculesDiesel.add(v);
+        for (Vehicule v : meilleurCapacite)
+            if ("D".equals(v.getTypeCarburant()))
+                vehiculesDiesel.add(v);
 
         List<Vehicule> vehiculesFinaux = vehiculesDiesel.isEmpty() ? meilleurCapacite : vehiculesDiesel;
 
-        if (vehiculesFinaux.size() == 1) return vehiculesFinaux.get(0);
-        else return vehiculesFinaux.get(new Random().nextInt(vehiculesFinaux.size()));
+        if (vehiculesFinaux.size() == 1)
+            return vehiculesFinaux.get(0);
+        else
+            return vehiculesFinaux.get(new Random().nextInt(vehiculesFinaux.size()));
     }
 
     private Trajet saveTrajet(TrajetCandidat candidat, LocalDate date) throws Exception {

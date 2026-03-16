@@ -431,7 +431,19 @@ public class AssignmentService {
             if ("D".equals(v.getTypeCarburant()))
                 vehiculesDiesel.add(v);
 
-        List<Vehicule> vehiculesFinaux = vehiculesDiesel.isEmpty() ? meilleurCapacite : vehiculesDiesel;
+        List<Vehicule> vehiculesFinaux;
+
+        if(vehiculesDiesel.isEmpty()) {
+            List<Vehicule> vehiculeEssence = new ArrayList<>();
+            for(Vehicule v: meilleurCapacite) {
+                if("ES".equals(v.getTypeCarburant())) {
+                    vehiculeEssence.add(v);
+                }
+            }
+            vehiculesFinaux = vehiculeEssence.isEmpty() ? meilleurCapacite : vehiculeEssence;
+        } else {
+            vehiculesFinaux = vehiculesDiesel;
+        }
 
         if (vehiculesFinaux.size() == 1)
             return vehiculesFinaux.get(0);

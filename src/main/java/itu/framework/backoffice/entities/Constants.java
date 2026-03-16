@@ -6,6 +6,7 @@ import legacy.query.FilterSet;
 import legacy.schema.BaseEntity;
 import legacy.strategy.GeneratedAfterPersistence;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.HashMap;
@@ -257,5 +258,34 @@ public class Constants extends BaseEntity {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public Integer getSmartWaitTime() throws Exception {
+        List<Reservation> reservations = Reservation.findUnassignedByDate(LocalDate.now());
+        Integer smartWaitTime = 0;
+        for(Reservation r: reservations) {
+            smartWaitTime += r.getTempsAttenteMax();
+        }
+        if(reservations.size() > 0) {
+            smartWaitTime = smartWaitTime / reservations.size();
+        } else {
+            smartWaitTime = 15;
+        }
+        return smartWaitTime;
+    }
+
+    public Integer getMaxWaitTime() throws Exception {
+        List<Reservation> reservations = Reservation.findUnassignedByDate(LocalDate.now());
+        Integer maxWaitTime = 0;
+        for(Reservation r : reservations) {
+            if(r.getTempsAttenteMax() > maxWaitTime) {
+                maxWaitTime = r.getTempsAttenteMax();
+            }
+        }
+        return maxWaitTime > 30 ? 30 : maxWaitTime;
+    }
+
+    public boolean isSmartWaitingEnabled() {
+        return true;
     }
 }

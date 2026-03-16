@@ -1,0 +1,13 @@
+Branche : sprint/5/1/temp_attente
+
+- Activer temps d'attente dans AssignmentService.java
+- Décommenter lignes 178-181 dans groupReservations()
+- Remplacer condition égalité heure par logique temps d'attente
+
+- Tri par priorité passagers
+- Modifier ligne 16 assignVehicles()
+- Ajouter tri secondaire par nb_passager descendant
+
+- Algorithme regroupement fenêtre glissante
+- Créer méthode findOptimalWaitingGroup()
+- Logique: attendre prochain vol VS partir immédiatement

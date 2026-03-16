@@ -6,6 +6,7 @@ import legacy.query.FilterSet;
 import legacy.schema.BaseEntity;
 import legacy.strategy.GeneratedAfterPersistence;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.HashMap;
@@ -260,7 +261,7 @@ public class Constants extends BaseEntity {
     }
 
     public Integer getSmartWaitTime() throws Exception {
-        List<Reservation> reservations = Reservation.findAll(Reservation.class);
+        List<Reservation> reservations = Reservation.findUnassignedByDate(LocalDate.now());
         Integer smartWaitTime = 0;
         for(Reservation r: reservations) {
             smartWaitTime += r.getTempsAttenteMax();
@@ -274,7 +275,7 @@ public class Constants extends BaseEntity {
     }
 
     public Integer getMaxWaitTime() throws Exception {
-        List<Reservation> reservations = Reservation.findAll(Reservation.class);
+        List<Reservation> reservations = Reservation.findUnassignedByDate(LocalDate.now());
         Integer maxWaitTime = 0;
         for(Reservation r : reservations) {
             if(r.getTempsAttenteMax() > maxWaitTime) {

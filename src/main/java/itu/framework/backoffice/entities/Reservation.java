@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 @Entity(tableName = "reservation")
 public class Reservation extends BaseEntity {
@@ -136,5 +137,27 @@ public class Reservation extends BaseEntity {
         LocalDateTime start = this.dateHeureArrivee;
         LocalDateTime end = this.dateHeureArrivee.plusMinutes(maxWait);
         return !reference.isBefore(start) && reference.isBefore(end);
+    }
+
+    public Integer getPriorityScore() throws Exception {
+        List<Vehicule> vehicules = Vehicule.findAll(Vehicule.class);
+        if(vehicules.isEmpty()) {
+            return 0;
+        }
+        Integer avgNbrPlace = 0;
+        for(Vehicule v : vehicules) {
+            avgNbrPlace += v.getNbrPlace();
+        }
+        avgNbrPlace = avgNbrPlace / vehicules.size();
+
+        if(this.getNbPassager() > avgNbrPlace) {
+            return 3;
+        }
+        else if(Objects.equals(this.getNbPassager(), avgNbrPlace)) {
+            return 2;
+        }
+        else {
+            return 1;
+        }
     }
 }

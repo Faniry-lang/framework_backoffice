@@ -258,4 +258,33 @@ public class Constants extends BaseEntity {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+
+    public Integer getSmartWaitTime() throws Exception {
+        List<Reservation> reservations = Reservation.findAll(Reservation.class);
+        Integer smartWaitTime = 0;
+        for(Reservation r: reservations) {
+            smartWaitTime += r.getTempsAttenteMax();
+        }
+        if(reservations.size() > 0) {
+            smartWaitTime = smartWaitTime / reservations.size();
+        } else {
+            smartWaitTime = 15;
+        }
+        return smartWaitTime;
+    }
+
+    public Integer getMaxWaitTime() throws Exception {
+        List<Reservation> reservations = Reservation.findAll(Reservation.class);
+        Integer maxWaitTime = 0;
+        for(Reservation r : reservations) {
+            if(r.getTempsAttenteMax() > maxWaitTime) {
+                maxWaitTime = r.getTempsAttenteMax();
+            }
+        }
+        return maxWaitTime > 30 ? 30 : maxWaitTime;
+    }
+
+    public boolean isSmartWaitingEnabled() {
+        return true;
+    }
 }

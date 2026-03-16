@@ -87,6 +87,7 @@ public class Reservation extends BaseEntity {
     /**
      * Récupère le temps d'attente maximum effectif
      * Si pas défini, utilise la constante par défaut
+     * 
      * @return Temps d'attente en minutes
      */
     public Integer getTempsAttenteMaxEffectif() {
@@ -97,7 +98,7 @@ public class Reservation extends BaseEntity {
     }
 
     public ReservationDTO toDto() throws Exception {
-        ReservationDTO dto =  new ReservationDTO();
+        ReservationDTO dto = new ReservationDTO();
         dto.setId_client(this.getIdClient());
         dto.setNb_passager(this.getNbPassager());
         dto.setNom_hotel(((Lieux) this.getForeignKey("id_hotel")).getNom());
@@ -108,7 +109,7 @@ public class Reservation extends BaseEntity {
 
     public static List<ReservationDTO> findByDate(LocalDate date) throws Exception {
         FilterSet filters = new FilterSet();
-        if(date != null) {
+        if (date != null) {
             LocalDateTime endOfTheDay = date.atStartOfDay().plusHours(24);
             LocalDateTime startOfTheDay = date.atStartOfDay();
             filters.add("date_heure_arrivee", Comparator.LESS_THAN, endOfTheDay);
@@ -116,19 +117,24 @@ public class Reservation extends BaseEntity {
         }
         List<Reservation> reservations = Reservation.filter(Reservation.class, filters);
         List<ReservationDTO> dtos = new ArrayList<>();
-        for(Reservation reservation: reservations) {
+        for (Reservation reservation : reservations) {
             dtos.add(reservation.toDto());
         }
         return dtos;
     }
 
     public static List<Reservation> findUnassignedByDate(LocalDate date) throws Exception {
-        String sql = "SELECT * FROM reservation\n" +
-                "WHERE id NOT IN\n" +
-                "(SELECT tr.id_reservation\n" +
-                "FROM trajet t JOIN trajet_reservation tr\n" +
-                "                   ON t.id = tr.id_trajet\n" +
-                "WHERE t.date_trajet <= ?)";
+        if (date == null) {
+            throw new IllegalArgumentException("date ne doit pas etre null");
+        }
+
+        String sql = "SELECT r.* FROM reservation r\n" +
+                "WHERE CAST(r.date_heure_arrivee AS DATE) = ?\n" +
+                "  AND NOT EXISTS (\n" +
+                "      SELECT 1 FROM trajet_reservation tr\n" +
+                "      WHERE tr.id_reservation = r.id\n" +
+                "  )\n" +
+                "ORDER BY r.date_heure_arrivee ASC, r.id ASC";
         Object[] params = { date };
         return Reservation.fetch(Reservation.class, sql, params);
     }
@@ -141,22 +147,20 @@ public class Reservation extends BaseEntity {
 
     public Integer getPriorityScore() throws Exception {
         List<Vehicule> vehicules = Vehicule.findAll(Vehicule.class);
-        if(vehicules.isEmpty()) {
+        if (vehicules.isEmpty()) {
             return 0;
         }
         Integer avgNbrPlace = 0;
-        for(Vehicule v : vehicules) {
+        for (Vehicule v : vehicules) {
             avgNbrPlace += v.getNbrPlace();
         }
         avgNbrPlace = avgNbrPlace / vehicules.size();
 
-        if(this.getNbPassager() > avgNbrPlace) {
+        if (this.getNbPassager() > avgNbrPlace) {
             return 3;
-        }
-        else if(Objects.equals(this.getNbPassager(), avgNbrPlace)) {
+        } else if (Objects.equals(this.getNbPassager(), avgNbrPlace)) {
             return 2;
-        }
-        else {
+        } else {
             return 1;
         }
     }

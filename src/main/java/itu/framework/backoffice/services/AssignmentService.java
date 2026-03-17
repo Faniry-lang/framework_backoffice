@@ -332,7 +332,16 @@ public class AssignmentService {
             return groupeVide;
         }
 
-        LocalDateTime limiteAttente = heurePremiere.plusMinutes(tempsAttenteRestant);
+        LocalDateTime limiteAttente = heureArrivee.plusMinutes(tempsAttenteRestant);
+        if(vehicule.getRef().equals("V-002")) {
+            System.out.println("[DEBUG] temps attente restant: "+tempsAttenteRestant);
+            System.out.println("limite attente: "+limiteAttente);
+            System.out.println("disponibles: ");
+            for(Reservation r:disponibles){
+                System.out.println("      "+r.getIdClient());
+            }
+            System.out.println("[FIN DEBUG]\n");
+        }
 
         TreeSet<LocalDateTime> pointsDepart = new TreeSet<>();
         pointsDepart.add(heurePremiere);

@@ -4,6 +4,7 @@ import itu.framework.backoffice.entities.Reservation;
 import itu.framework.backoffice.entities.Vehicule;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -14,6 +15,15 @@ public class TrajetCandidat {
     LocalDateTime heureArrivee;
     BigDecimal distanceTotale;
     List<String> ordreVisites;
+
+    public Integer getTempsAttenteRestant() {
+        if(heureDepart == null || reservations.size() == 0) {
+            return 0;
+        }
+        Long minutesPasseesEntrePremiereReservationEtHeureDepart = Duration.between(heureDepart, reservations.get(0).getDateHeureArrivee()).toMinutes();
+        Integer minutesRestantes = reservations.get(0).getTempsAttenteMaxEffectif() - Math.toIntExact(minutesPasseesEntrePremiereReservationEtHeureDepart);
+        return minutesRestantes > 0 ? minutesRestantes : 0;
+    }
 
     public TrajetCandidat(Vehicule vehicule, List<Reservation> reservations, LocalDateTime heureDepart, LocalDateTime heureArrivee, BigDecimal distanceTotale, List<String> ordreVisites) {
         this.vehicule = vehicule;

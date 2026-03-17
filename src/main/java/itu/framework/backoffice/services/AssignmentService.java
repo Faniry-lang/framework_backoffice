@@ -1,12 +1,13 @@
 package itu.framework.backoffice.services;
 
-import itu.framework.backoffice.constantes.AssignmentConstants;
 import itu.framework.backoffice.entities.*;
 import itu.framework.backoffice.models.AssignmentResult;
+import itu.framework.backoffice.models.GroupeReservation;
 import itu.framework.backoffice.models.TrajetCandidat;
 import itu.framework.backoffice.models.TripTiming;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -30,6 +31,11 @@ public class AssignmentService {
         return !(aEnd.isBefore(bStart) || aEnd.isEqual(bStart) || aStart.isAfter(bEnd) || aStart.isEqual(bEnd));
     }
 
+    private static boolean isDateBetween(LocalDateTime start, LocalDateTime end, LocalDateTime date) {
+        if (start == null || end == null || date == null) return false;
+        return (start.isBefore(date) || start.isEqual(date)) && end.isAfter(date);
+    }
+
     private static boolean isVehicleFree(Integer vehiculeId, LocalDateTime start, LocalDateTime end,
             Map<Integer, List<Interval>> calendar) {
         if (start == null || end == null)
@@ -48,7 +54,24 @@ public class AssignmentService {
             Map<Integer, List<Interval>> calendar) {
         if (vehiculeId == null || start == null || end == null)
             return;
-        calendar.computeIfAbsent(vehiculeId, k -> new ArrayList<>()).add(new Interval(start, end));
+        List<Interval> list = calendar.computeIfAbsent(vehiculeId, k -> new ArrayList<>());
+        list.add(new Interval(start, end));
+        list.sort(Comparator.comparing(i -> i.start));
+        List<Interval> merged = new ArrayList<>();
+        for (Interval iv : list) {
+            if (merged.isEmpty()) {
+                merged.add(iv);
+            } else {
+                Interval last = merged.get(merged.size() - 1);
+                if (!iv.start.isAfter(last.end)) {
+                    if (iv.end.isAfter(last.end))
+                        last.end = iv.end;
+                } else {
+                    merged.add(iv);
+                }
+            }
+        }
+        calendar.put(vehiculeId, merged);
     }
 
     private static int getPassengerPriorityScore(Reservation reservation) {
@@ -60,6 +83,22 @@ public class AssignmentService {
         if (nbPassager >= 3)
             return 2;
         return 1;
+    }
+
+    private static LocalDateTime getClosestAvailableDateForVehicle(Integer vehicleId, LocalDateTime date, Map<Integer, List<Interval>> calendar) {
+        if (vehicleId == null || date == null) return date;
+        List<Interval> intervals = calendar.get(vehicleId);
+        if (intervals == null || intervals.isEmpty()) return date;
+        intervals.sort(Comparator.comparing(i -> i.start));
+        for (Interval iv : intervals) {
+            if (isDateBetween(iv.start, iv.end, date) || iv.start.isEqual(date)) {
+                return iv.end;
+            }
+            if (date.isBefore(iv.start)) {
+                return date;
+            }
+        }
+        return date;
     }
 
     public AssignmentResult assignVehicles(LocalDate date) throws Exception {
@@ -117,14 +156,15 @@ public class AssignmentService {
                     break;
                 }
 
-                List<Reservation> groupe = findOptimalWaitingGroup(meilleurVehicule, disponiblesPourTraitement);
+                GroupeReservation groupeReservation = findOptimalWaitingGroup(meilleurVehicule, occupiedCalendar, disponiblesPourTraitement);
+                List<Reservation> groupe = groupeReservation.getReservations();
                 if (groupe.isEmpty()) {
                     vehiculesCandidates.remove(meilleurVehicule);
                     continue;
                 }
 
-                TrajetCandidat candidat = optimizeRoute(meilleurVehicule, groupe, aeroport);
-                TripTiming timing = calculateTripTiming(meilleurVehicule, groupe, candidat.getOrdreVisites());
+                TrajetCandidat candidat = optimizeRoute(meilleurVehicule, groupeReservation.getHeureArriveeVehicule(), groupe, aeroport);
+                TripTiming timing = calculateTripTiming(meilleurVehicule, groupeReservation.getHeureArriveeVehicule(), groupe, candidat.getOrdreVisites());
                 if (timing != null) {
                     candidat.setHeureDepart(timing.getHeureDepart());
                     candidat.setHeureArrivee(timing.getHeureArrivee());
@@ -149,15 +189,7 @@ public class AssignmentService {
                 reservationsAssignees.add(premiereReservation.getId());
             }
 
-            boolean anyVehicleLeft = false;
-            for (Vehicule v : vehiculesDisponibles) {
-                // boucle la vehicule raha miodina le boucle de mbola misy vehicule zany
-                if (true) {
-                    anyVehicleLeft = true;
-                    break;
-                }
-            }
-            if (!anyVehicleLeft)
+            if (vehiculesDisponibles.isEmpty())
                 break;
         }
 
@@ -167,6 +199,9 @@ public class AssignmentService {
 
         List<Trajet> trajetsCreated = new ArrayList<>();
         Set<Integer> reservationsSauvegardees = new HashSet<>();
+
+        // a insérer juste avant ça
+        //groupVehicles(candidats);
 
         for (TrajetCandidat candidat : candidats) {
             boolean toutesDisponibles = true;
@@ -195,9 +230,10 @@ public class AssignmentService {
         return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
     }
 
-    private List<Reservation> findOptimalWaitingGroup(Vehicule vehicule, List<Reservation> disponibles)
+    private GroupeReservation findOptimalWaitingGroup(Vehicule vehicule, Map<Integer, List<Interval>> calendar, List<Reservation> disponibles)
             throws Exception {
-        List<Reservation> groupeVide = new ArrayList<>();
+        GroupeReservation groupeVide = new GroupeReservation();
+        groupeVide.setReservations(new ArrayList<>());
         if (vehicule == null || disponibles == null || disponibles.isEmpty())
             return groupeVide;
 
@@ -213,19 +249,29 @@ public class AssignmentService {
         if (heurePremiere == null) {
             List<Reservation> groupe = new ArrayList<>();
             groupe.add(premiere);
-            return groupe;
+            groupeVide.setReservations(groupe);
+            return groupeVide;
         }
 
-        LocalDateTime limiteAttente = heurePremiere.plusMinutes(premiere.getTempsAttenteMaxEffectif());
+        LocalDateTime heureArrivee = getClosestAvailableDateForVehicle(vehicule.getId(), heurePremiere, calendar);
+
+        long attenteDeja = Math.max(0, Duration.between(heurePremiere, heureArrivee).toMinutes());
+        Integer tempsAttenteMaxEffectif = premiere.getTempsAttenteMaxEffectif() == null ? 0 : premiere.getTempsAttenteMaxEffectif();
+        Integer tempsAttenteRestant = tempsAttenteMaxEffectif - (int) attenteDeja;
+
+        if (tempsAttenteRestant <= 0) {
+            return groupeVide;
+        }
+
+        LocalDateTime limiteAttente = heurePremiere.plusMinutes(tempsAttenteRestant);
 
         TreeSet<LocalDateTime> pointsDepart = new TreeSet<>();
-        pointsDepart.add(heurePremiere); // partir immédiatement
+        pointsDepart.add(heurePremiere);
         for (int i = 1; i < disponibles.size(); i++) {
             Reservation candidate = disponibles.get(i);
             if (candidate == null || candidate.getDateHeureArrivee() == null)
                 continue;
             LocalDateTime heureCandidate = candidate.getDateHeureArrivee();
-            // Fenêtre glissante : on teste aussi l'option d'attendre les prochains vols
             if (!heureCandidate.isBefore(heurePremiere) && !heureCandidate.isAfter(limiteAttente)) {
                 pointsDepart.add(heureCandidate);
             }
@@ -257,7 +303,6 @@ public class AssignmentService {
             } else if (nbPassagers == meilleurNbPassagers
                     && groupeCandidat.size() == meilleurNbReservations
                     && (meilleurDepart == null || departCandidat.isBefore(meilleurDepart))) {
-                // A score égal, on évite d'attendre inutilement
                 meilleur = true;
             }
 
@@ -269,7 +314,10 @@ public class AssignmentService {
             }
         }
 
-        return meilleurGroupe;
+        GroupeReservation gp = new GroupeReservation();
+        gp.setReservations(meilleurGroupe);
+        gp.setHeureArriveeVehicule(heureArrivee);
+        return gp;
     }
 
     private List<Reservation> buildGroupAtDeparture(Vehicule vehicule, Reservation premiere,
@@ -317,7 +365,7 @@ public class AssignmentService {
         return groupe;
     }
 
-    private TrajetCandidat optimizeRoute(Vehicule vehicule, List<Reservation> groupe, Lieux aeroport) throws Exception {
+    private TrajetCandidat optimizeRoute(Vehicule vehicule, LocalDateTime heureArriveeVehicule, List<Reservation> groupe, Lieux aeroport) throws Exception {
         List<String> ordreVisites = new ArrayList<>();
         ordreVisites.add(aeroport.getCode());
 
@@ -367,31 +415,50 @@ public class AssignmentService {
 
         ordreVisites.add(aeroport.getCode());
 
-        LocalDateTime heureDepart = groupe.get(0).getDateHeureArrivee();
-        double minutesTrajet = distanceTotal.doubleValue() / vehicule.getVitesseMoyenne() * 60;
-        LocalDateTime heureArrivee = heureDepart.plusMinutes((long) minutesTrajet);
+        Optional<Reservation> reservationLaPlusTard = groupe.stream().max(Comparator.comparing(Reservation::getDateHeureArrivee));
+        if(reservationLaPlusTard.isEmpty()) throw new Exception("Erreur lors de l'obtention de la réservation la plus tardive");
+        LocalDateTime lastArrival = reservationLaPlusTard.get().getDateHeureArrivee();
+        LocalDateTime heureDepart = heureArriveeVehicule != null ? heureArriveeVehicule : lastArrival;
+        if (heureDepart.isBefore(lastArrival)) {
+            heureDepart = lastArrival;
+        }
+
+        double vitesse = vehicule.getVitesseMoyenne() == null || vehicule.getVitesseMoyenne() <= 0.0 ? 60.0 : vehicule.getVitesseMoyenne();
+        double minutesTrajet = distanceTotal.doubleValue() / vitesse * 60.0;
+        long minutesArrondis = (long) Math.ceil(minutesTrajet);
+        LocalDateTime heureArrivee = heureDepart.plusMinutes(minutesArrondis);
 
         return new TrajetCandidat(vehicule, groupe, heureDepart, heureArrivee, distanceTotal, ordreVisites);
     }
 
-    private TripTiming calculateTripTiming(Vehicule v, List<Reservation> groupe, List<String> ordre) throws Exception {
+    private TripTiming calculateTripTiming(Vehicule v, LocalDateTime heureArriveeVehicule, List<Reservation> groupe, List<String> ordre) throws Exception {
         if (groupe == null || groupe.isEmpty() || ordre == null || ordre.size() < 2)
             return null;
-        LocalDateTime heureDepart = groupe.get(0).getDateHeureArrivee();
+        Optional<Reservation> reservationLaPlusTard = groupe.stream().max(Comparator.comparing(Reservation::getDateHeureArrivee));
+        if(reservationLaPlusTard.isEmpty()) throw new Exception("Erreur lors de l'obtention de la réservation la plus tardive");
+        LocalDateTime lastArrival = reservationLaPlusTard.get().getDateHeureArrivee();
+        LocalDateTime heureDepart = heureArriveeVehicule != null ? heureArriveeVehicule : lastArrival;
+        if (heureDepart.isBefore(lastArrival)) {
+            heureDepart = lastArrival;
+        }
 
         BigDecimal distanceTotale = BigDecimal.ZERO;
         long dureeMinutesTotale = 0;
+        double vitesse = v.getVitesseMoyenne() == null || v.getVitesseMoyenne() <= 0.0 ? 60.0 : v.getVitesseMoyenne();
+
         for (int i = 0; i < ordre.size() - 1; i++) {
             String codeFrom = ordre.get(i);
             String codeTo = ordre.get(i + 1);
 
             Distance distance = Distance.getDistance(codeFrom, codeTo);
-            if (distance != null) {
-                BigDecimal distanceKm = distance.getDistanceKm();
-                distanceTotale = distanceTotale.add(distanceKm);
-                double dureeMinutes = distanceKm.doubleValue() / v.getVitesseMoyenne() * 60;
-                dureeMinutesTotale += (long) dureeMinutes;
+            if (distance == null) {
+                System.out.println("[WARN] distance introuvable entre " + codeFrom + " et " + codeTo);
+                return null;
             }
+            BigDecimal distanceKm = distance.getDistanceKm();
+            distanceTotale = distanceTotale.add(distanceKm);
+            double dureeMinutes = distanceKm.doubleValue() / vitesse * 60.0;
+            dureeMinutesTotale += (long) Math.ceil(dureeMinutes);
         }
 
         LocalDateTime heureArrivee = heureDepart.plusMinutes(dureeMinutesTotale);
@@ -449,6 +516,28 @@ public class AssignmentService {
             return vehiculesFinaux.get(0);
         else
             return vehiculesFinaux.get(new Random().nextInt(vehiculesFinaux.size()));
+    }
+
+    public void groupVehicles(List<TrajetCandidat> trajetCandidats) {
+        trajetCandidats.sort(Comparator.comparing(TrajetCandidat::getHeureDepart));
+        List<TrajetCandidat> grouped = new ArrayList<>();
+        for(TrajetCandidat t1: trajetCandidats) {
+            Integer tempsAttenteRestant = t1.getTempsAttenteRestant();
+            List<TrajetCandidat> groupForThisCandidate = new ArrayList<>();
+            for(TrajetCandidat t2: trajetCandidats) {
+                if(t2.equals(t1) || grouped.contains(t2)) continue;
+                if(
+                        isDateBetween(t1.getHeureDepart(), t1.getHeureDepart().plusMinutes(tempsAttenteRestant), t2.getHeureDepart())
+                ) {
+                    groupForThisCandidate.add(t2);
+                }
+            }
+            LocalDateTime heureDepartLaPlusTardive =
+                    groupForThisCandidate.stream().max(Comparator.comparing(TrajetCandidat::getHeureDepart)).get().getHeureDepart();
+            for(TrajetCandidat tc : groupForThisCandidate) {
+                tc.setHeureDepart(heureDepartLaPlusTardive);
+            }
+        }
     }
 
     private Trajet saveTrajet(TrajetCandidat candidat, LocalDate date) throws Exception {

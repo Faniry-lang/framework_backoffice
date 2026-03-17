@@ -20,8 +20,13 @@ public class TrajetCandidat {
         if(heureDepart == null || reservations.size() == 0) {
             return 0;
         }
-        Long minutesPasseesEntrePremiereReservationEtHeureDepart = Duration.between(heureDepart, reservations.get(0).getDateHeureArrivee()).toMinutes();
+        Long minutesPasseesEntrePremiereReservationEtHeureDepart = Duration.between(reservations.get(0).getDateHeureArrivee(), heureDepart).toMinutes();
         Integer minutesRestantes = reservations.get(0).getTempsAttenteMaxEffectif() - Math.toIntExact(minutesPasseesEntrePremiereReservationEtHeureDepart);
+        if(minutesRestantes > 30) {
+            System.out.println("[DEBUG TEMPS RESTANT]: minutes passess entre premier et heure dep: "+minutesPasseesEntrePremiereReservationEtHeureDepart);
+            System.out.println("[DEBUG TEMPS RESTANT]: temps attente max effectif: "+reservations.get(0).getTempsAttenteMaxEffectif());
+            System.out.println("[DEBUG TEMPS RESTANT]: minutes restantes: "+minutesRestantes);
+        }
         return minutesRestantes > 0 ? minutesRestantes : 0;
     }
 

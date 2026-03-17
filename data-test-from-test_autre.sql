@@ -11,9 +11,9 @@ INSERT INTO hotel (id, nom, code, aeroport) VALUES
 
 -- VEHICULES (id, ref, nbr_place, type_carburant, vitesse_moyenne)
 INSERT INTO vehicule (id, ref, nbr_place, type_carburant, vitesse_moyenne) VALUES
-    (1, 'V-001', 4, 'ES', 30.00),
-    (2, 'V-002', 4, 'D', 30.00),
-    (3, 'V-003', 6, 'D', 30.00);
+    (1, 'V-001', 3, 'ES', 30.00),
+    (2, 'V-002', 3, 'D', 30.00),
+    (3, 'V-003', 4, 'D', 30.00);
 
 -- DISTANCES (id, code_from, code_to, distance_km)
 -- On ajoute distances bidirectionnelles si besoin (ici entrées uniques suffisent pour l'exemple)

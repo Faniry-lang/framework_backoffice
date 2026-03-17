@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class AssignmentService {
 
@@ -173,7 +174,7 @@ public class AssignmentService {
             boolean assignedThisReservation = false;
 
             while (!vehiculesCandidates.isEmpty() && !assignedThisReservation) {
-                Vehicule meilleurVehicule = findBestVehicle(premiereReservation, vehiculesCandidates);
+                Vehicule meilleurVehicule = findBestVehicle(premiereReservation, candidats, vehiculesCandidates);
                 if (meilleurVehicule == null) {
                     reservationsAssignees.add(premiereReservation.getId());
                     break;
@@ -534,7 +535,7 @@ public class AssignmentService {
         return new TripTiming(heureDepart, heureArrivee, distanceTotale);
     }
 
-    private Vehicule findBestVehicle(Reservation reservation, List<Vehicule> disponibles) {
+    private Vehicule findBestVehicle(Reservation reservation, List<TrajetCandidat> candidats, List<Vehicule> disponibles) {
         if (reservation == null || disponibles == null || disponibles.isEmpty())
             return null;
 
@@ -561,6 +562,57 @@ public class AssignmentService {
         if (meilleurCapacite.size() == 1)
             return meilleurCapacite.get(0);
 
+// décommenter pour sprint 6
+//        List<TrajetCandidat> candidatsPourCesVehicules = new ArrayList<>();
+//
+//        for(Vehicule v: meilleurCapacite) {
+//            for(TrajetCandidat c : candidats) {
+//                if(!candidatsPourCesVehicules.contains(c) && v.getId().equals(c.getVehicule().getId())) {
+//                    candidatsPourCesVehicules.add(c);
+//                }
+//            }
+//        }
+//        System.out.println("VEHICULE DISPO: "+meilleurCapacite);
+//        System.out.println("TRAJET POUR CES VEHICULES: "+candidatsPourCesVehicules.size());
+//
+//        Map<Integer, Long> candidatsVehicules =
+//                candidatsPourCesVehicules.stream()
+//                        .collect(Collectors.groupingBy(
+//                                c -> c.getVehicule().getId(),
+//                                Collectors.counting()
+//                        ));
+//
+//        for(Map.Entry<Integer, Long> entry : candidatsVehicules.entrySet()) {
+//            System.out.println("VEHICULE: "+entry.getKey()+", CANDIDATS: "+entry.getValue());
+//        }
+//
+//        Long nbrCandidats = candidatsVehicules.values()
+//                .stream()
+//                .min(Long::compareTo)
+//                .orElse(0L);
+//
+//        Iterator<Vehicule> it = meilleurCapacite.iterator();
+//        System.out.println("MIN NBR CANDIDATS: "+nbrCandidats);
+//
+//        List<Vehicule> nonConsideres = new ArrayList<>();
+//
+//        while (it.hasNext()) {
+//            Vehicule v = it.next();
+//            Long count = candidatsVehicules.getOrDefault(v.getId(), 0L);
+//            System.out.println("VEHICULE: "+v.getId()+", COUNT: "+count+", CANDIDATS: "+nbrCandidats);
+//            if (!Objects.equals(count, nbrCandidats)) {
+//                nonConsideres.add(v);
+//            }
+//        }
+//
+//        for(Vehicule v : nonConsideres) {
+//            meilleurCapacite.remove(v);
+//        }
+//
+//        if(meilleurCapacite.size() == 1) {
+//            return meilleurCapacite.get(0);
+//        }
+
         List<Vehicule> vehiculesDiesel = new ArrayList<>();
         for (Vehicule v : meilleurCapacite)
             if ("D".equals(v.getTypeCarburant()))
@@ -583,6 +635,7 @@ public class AssignmentService {
         if (vehiculesFinaux.size() == 1)
             return vehiculesFinaux.get(0);
         else
+            System.out.println("SIZE FINAL: "+vehiculesFinaux.size());
             return vehiculesFinaux.get(new Random().nextInt(vehiculesFinaux.size()));
     }
 

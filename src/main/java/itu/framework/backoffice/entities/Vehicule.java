@@ -143,4 +143,9 @@ public class Vehicule extends BaseEntity {
         List<Trajet> trajetList = findTrajets(date);
         return estOccupe(trajetList, dateTime);
     }
+
+    @Override
+    public String toString() {
+        return "{id:"+this.id+", ref: "+this.ref+" }";
+    }
 }

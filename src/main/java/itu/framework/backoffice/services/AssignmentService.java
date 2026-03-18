@@ -11,7 +11,6 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class AssignmentService {
 
@@ -627,17 +626,19 @@ public class AssignmentService {
 
         List<Vehicule> vehiculesFinaux;
 
-        if(vehiculesDiesel.isEmpty()) {
-            List<Vehicule> vehiculeEssence = new ArrayList<>();
-            for(Vehicule v: meilleurCapacite) {
-                if("ES".equals(v.getTypeCarburant())) {
-                    vehiculeEssence.add(v);
-                }
-            }
-            vehiculesFinaux = vehiculeEssence.isEmpty() ? meilleurCapacite : vehiculeEssence;
-        } else {
-            vehiculesFinaux = vehiculesDiesel;
-        }
+//        if(vehiculesDiesel.isEmpty()) {
+//            List<Vehicule> vehiculeEssence = new ArrayList<>();
+//            for(Vehicule v: meilleurCapacite) {
+//                if("ES".equals(v.getTypeCarburant())) {
+//                    vehiculeEssence.add(v);
+//                }
+//            }
+//            vehiculesFinaux = vehiculeEssence.isEmpty() ? meilleurCapacite : vehiculeEssence;
+//        } else {
+//            vehiculesFinaux = vehiculesDiesel;
+//        }
+
+        vehiculesFinaux = vehiculesDiesel;
 
         if (vehiculesFinaux.size() == 1)
             return vehiculesFinaux.get(0);

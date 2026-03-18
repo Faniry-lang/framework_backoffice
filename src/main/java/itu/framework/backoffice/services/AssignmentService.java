@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class AssignmentService {
 
@@ -617,7 +618,6 @@ public class AssignmentService {
             System.out.println("Choisi: "+meilleurCapacite.get(0).toString()+" over "+meilleurCapacite);
             System.out.println("====FIN====");
             return meilleurCapacite.get(0);
-        }
 
         List<Vehicule> vehiculesDiesel = new ArrayList<>();
         for (Vehicule v : meilleurCapacite)

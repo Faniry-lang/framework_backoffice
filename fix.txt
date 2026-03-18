@@ -1,0 +1,4 @@
+-nifamadika le heureDepart sy reservation.Get(0).getDateHeureArrivee() tao am
+    TrajetCandidat.getTempsAttenteRestant
+-ilay limiteAttente tao am findOptimalWaitingGroup lasa basé tam heureDepart fa tsy
+    heureArriveeVehicule

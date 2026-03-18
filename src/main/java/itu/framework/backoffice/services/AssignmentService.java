@@ -156,14 +156,10 @@ public class AssignmentService {
 
         List<TrajetCandidat> candidats = new ArrayList<>();
         Set<Integer> reservationsAssignees = new HashSet<>();
+        List<Reservation> remainingReservations = new ArrayList<>(reservationsDisponibles);
 
-        while (!reservationsDisponibles.isEmpty()) {
-            List<Reservation> disponiblesPourTraitement = new ArrayList<>();
-            for (Reservation r : reservationsDisponibles) {
-                if (!reservationsAssignees.contains(r.getId())) {
-                    disponiblesPourTraitement.add(r);
-                }
-            }
+        while (!remainingReservations.isEmpty()) {
+            List<Reservation> disponiblesPourTraitement = new ArrayList<>(remainingReservations);
 
             if (disponiblesPourTraitement.isEmpty())
                 break;
@@ -263,6 +259,14 @@ public class AssignmentService {
 
             if (vehiculesDisponibles.isEmpty())
                 break;
+
+            Iterator<Reservation> remIt = remainingReservations.iterator();
+            while (remIt.hasNext()) {
+                Reservation r = remIt.next();
+                if (reservationsAssignees.contains(r.getId())) {
+                    remIt.remove();
+                }
+            }
         }
 
         candidats.sort((c1, c2) -> Integer.compare(
@@ -290,11 +294,7 @@ public class AssignmentService {
             }
         }
 
-        List<Reservation> reservationsNonAssignees = new ArrayList<>();
-        for (Reservation r : reservationsDisponibles) {
-            if (!reservationsSauvegardees.contains(r.getId()))
-                reservationsNonAssignees.add(r);
-        }
+        List<Reservation> reservationsNonAssignees = new ArrayList<>(remainingReservations);
 
         return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
     }
@@ -494,7 +494,7 @@ public class AssignmentService {
         ordreVisites.add(aeroport.getCode());
 
         Optional<Reservation> reservationLaPlusTard = groupe.stream().max(Comparator.comparing(Reservation::getDateHeureArrivee));
-        if(reservationLaPlusTard.isEmpty()) throw new Exception("Erreur lors de l'obtention de la réservation la plus tardive");
+        if (!reservationLaPlusTard.isPresent()) throw new Exception("Erreur lors de l'obtention de la réservation la plus tardive");
         LocalDateTime lastArrival = reservationLaPlusTard.get().getDateHeureArrivee();
         LocalDateTime heureDepart = heureArriveeVehicule != null ? heureArriveeVehicule : lastArrival;
         if (heureDepart.isBefore(lastArrival)) {
@@ -513,7 +513,7 @@ public class AssignmentService {
         if (groupe == null || groupe.isEmpty() || ordre == null || ordre.size() < 2)
             return null;
         Optional<Reservation> reservationLaPlusTard = groupe.stream().max(Comparator.comparing(Reservation::getDateHeureArrivee));
-        if(reservationLaPlusTard.isEmpty()) throw new Exception("Erreur lors de l'obtention de la réservation la plus tardive");
+        if (!reservationLaPlusTard.isPresent()) throw new Exception("Erreur lors de l'obtention de la réservation la plus tardive");
         LocalDateTime lastArrival = reservationLaPlusTard.get().getDateHeureArrivee();
         LocalDateTime heureDepart = heureArriveeVehicule != null ? heureArriveeVehicule : lastArrival;
         if (heureDepart.isBefore(lastArrival)) {

@@ -1,0 +1,13 @@
+- Créer `ReservationDTO` (POJO) identique à `Reservation`.
+- Charger les réservations non assignées et convertir en `ReservationDTO` en début de `assignVehicles`.
+- Ajouter maps en mémoire : `remainingPassengers` et `originalPassengers`.
+- Modifier les usages internes pour travailler avec `ReservationDTO`.
+- Modifier `findBestVehicle` :
+  - tester `meilleurCapacite` (véhicule pouvant tout prendre)
+  - si échec : trier véhicules par `freeSeats` (fenêtre), tie-breakers = candidateCount puis carburant
+  - parcourir véhicules pour allouer une `part` = min(remaining, freeSeats)
+  - si allocation : décrémenter `ReservationDTO` original, créer `fragmentDTO` (nbPassager=part) et retourner le fragment + véhicule
+- Adapter le flux pour traiter le `fragmentDTO` comme une réservation normale.
+- Mettre à jour `tentativeCalendar` après chaque allocation partielle.
+- Avant persistance : vérifier somme fragments <= original via `savedPassengers`.
+- Dans `saveTrajet`, écrire `trajet_reservation.nbr_passager` avec la valeur du fragment et `id_reservation` = id original.

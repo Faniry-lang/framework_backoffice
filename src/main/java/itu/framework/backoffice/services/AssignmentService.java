@@ -277,7 +277,7 @@ public class AssignmentService {
                     LocalDateTime end = candidat.getHeureArrivee();
 
                     if (isVehicleFreeOverall(meilleurVehicule.getId(), start, end, occupiedCalendar,
-                            tentativeCalendar)) {
+                            tentativeCalendar) && meilleurVehicule.estDispo(end) && meilleurVehicule.estDispo(start)) {
                         candidats.add(candidat);
                         // Do not add to reservationsAssignees yet because the original is still pending
                         // with remaining passengers
@@ -330,7 +330,7 @@ public class AssignmentService {
                     LocalDateTime end = candidat.getHeureArrivee();
 
                     if (isVehicleFreeOverall(meilleurVehicule.getId(), start, end, occupiedCalendar,
-                            tentativeCalendar)) {
+                            tentativeCalendar) && meilleurVehicule.estDispo(end) && meilleurVehicule.estDispo(start)) {
                         candidats.add(candidat);
                         for (ReservationDTO r : groupe)
                             reservationsAssignees.add(r.getId());

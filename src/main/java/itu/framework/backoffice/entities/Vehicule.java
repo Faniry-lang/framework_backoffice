@@ -9,6 +9,8 @@ import legacy.schema.BaseEntity;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 @Entity(tableName = "vehicule")
@@ -32,6 +34,34 @@ public class Vehicule extends BaseEntity {
 
     @Column(name = "vitesse_moyenne")
     private Double vitesseMoyenne;
+
+    public String getHeureDispo() {
+        return heureDispo;
+    }
+
+    public LocalTime getHeureDispoTime() {
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        LocalTime time = LocalTime.parse(heureDispo, formatter);
+        return time;
+    }
+
+    public boolean estDispo(LocalDateTime dateTime) {
+        if(ref.equals("V3")) {
+            System.out.println("HEURE: "+dateTime.toLocalTime());
+            System.out.println("DISPO: "+getHeureDispoTime());
+        }
+        if(dateTime.toLocalTime().isBefore(getHeureDispoTime())) {
+            return false;
+        }
+        return true;
+    }
+
+    public void setHeureDispo(String heureDispo) {
+        this.heureDispo = heureDispo;
+    }
+
+    @Column(name = "heure_dispo")
+    private String heureDispo;
 
     // @Column(name = "vitesse_moyenne")
     // Double vitesseMoyenne;

@@ -467,71 +467,28 @@ public class AssignmentService {
             addIntervalToCalendar(vid, start, end, occupiedToSave);
         }
 
-        // Return original POJOs for non assigned
-        List<Reservation> reservationsNonAssignees = new ArrayList<>();
-        // We need to reconstruct DTOs back to Entity or just return those that have
-        // remaining > 0?
-        for (ReservationDTO dto : remainingReservations) {
-            // Find original or create new with remaining
-            // Actually findUnassignedByDate returned entities.
-            // We can map remaining DTOs back.
-            // But wait, DTO might be partially assigned.
-            // So if remaining > 0, we return it as unassigned (partially).
-            if (dto.getNb_passager() > 0) {
-                // Find original entity to return correct type, but update its passenger count?
-                // Or just creating dummy entity?
-                // Match with id to find the original entity
-                for (Reservation r : reservationsDisponibles) {
-                    if (r.getId().equals(dto.getId())) {
-                        r.setNbPassager(dto.getNb_passager()); // Update with remaining
-                        reservationsNonAssignees.add(r);
-                        break;
-                    }
-                }
+        // Build non-assigned list from what was REALLY persisted.
+        // This avoids inconsistencies caused by intermediate candidate mutations.
+        Map<Integer, Integer> restantsParReservation = new HashMap<>(originalPassengers);
+
+        for (Trajet trajet : trajetsCreated) {
+            List<TrajetReservation> liensSauves = TrajetReservation.findByTrajet(trajet.getId());
+            for (TrajetReservation lien : liensSauves) {
+                Integer idReservation = lien.getIdReservation();
+                Integer nbAffecte = lien.getNbrPassager() != null ? lien.getNbrPassager() : 0;
+                if (idReservation == null)
+                    continue;
+                Integer restant = restantsParReservation.getOrDefault(idReservation, 0);
+                restantsParReservation.put(idReservation, Math.max(0, restant - nbAffecte));
             }
         }
 
-        // Add failed reservations (never assigned) with their *initial* count unless
-        // modified?
-        // Actually if they are in failedReservations, they might still be in
-        // remainingReservations list if we didn't remove them.
-        // But above loop iterates remainingReservations.
-        // If they were removed from remainingReservations because of failure, we need
-        // to add them back.
-        // Wait, loop above iterates remainingReservations.
-        // In the main loop, if failed, we removed it from remainingReservations (in
-        // previous fix attempt I removed it?).
-        // Actually, my fix removed it from the ITERATOR, so it IS removed from
-        // remainingReservations list.
-        // So we need to recover them.
-
-        for (Integer failedId : failedReservations) {
-            // Find in original DTOs map or list
-            boolean alreadyAdded = false;
-            for (Reservation res : reservationsNonAssignees) {
-                if (res.getId().equals(failedId)) {
-                    alreadyAdded = true;
-                    break;
-                }
-            }
-            if (!alreadyAdded) {
-                for (Reservation r : reservationsDisponibles) {
-                    if (r.getId().equals(failedId)) {
-                        // We need the CURRENT remaining passengers for this one.
-                        // Where is it stored? In the DTO that was removed.
-                        // We should probably find the DTO in reservationDtos list (which was the
-                        // source).
-                        // reservationDtos list contains the DTO objects which were modified in place.
-                        for (ReservationDTO dto : reservationDtos) {
-                            if (dto.getId().equals(failedId)) {
-                                r.setNbPassager(dto.getNb_passager());
-                                reservationsNonAssignees.add(r);
-                                break;
-                            }
-                        }
-                        break;
-                    }
-                }
+        List<Reservation> reservationsNonAssignees = new ArrayList<>();
+        for (Reservation r : reservationsDisponibles) {
+            Integer restant = restantsParReservation.get(r.getId());
+            if (restant != null && restant > 0) {
+                r.setNbPassager(restant);
+                reservationsNonAssignees.add(r);
             }
         }
 

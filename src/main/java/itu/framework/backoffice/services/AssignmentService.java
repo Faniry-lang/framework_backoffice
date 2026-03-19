@@ -27,7 +27,7 @@ public class AssignmentService {
     }
 
     private static boolean overlaps(LocalDateTime aStart, LocalDateTime aEnd, LocalDateTime bStart,
-            LocalDateTime bEnd) {
+                                    LocalDateTime bEnd) {
         if (aStart == null || aEnd == null || bStart == null || bEnd == null)
             return false;
         return !(aEnd.isBefore(bStart) || aEnd.isEqual(bStart) || aStart.isAfter(bEnd) || aStart.isEqual(bEnd));
@@ -40,7 +40,7 @@ public class AssignmentService {
     }
 
     private static boolean isVehicleFree(Integer vehiculeId, LocalDateTime start, LocalDateTime end,
-            Map<Integer, List<Interval>> calendar) {
+                                         Map<Integer, List<Interval>> calendar) {
         if (start == null || end == null)
             return false;
         List<Interval> list = calendar.get(vehiculeId);
@@ -54,7 +54,7 @@ public class AssignmentService {
     }
 
     private static void addIntervalToCalendar(Integer vehiculeId, LocalDateTime start, LocalDateTime end,
-            Map<Integer, List<Interval>> calendar) {
+                                              Map<Integer, List<Interval>> calendar) {
         if (vehiculeId == null || start == null || end == null)
             return;
         List<Interval> list = calendar.computeIfAbsent(vehiculeId, k -> new ArrayList<>());
@@ -100,7 +100,7 @@ public class AssignmentService {
     }
 
     private static LocalDateTime getClosestAvailableDateForVehicle(Integer vehicleId, LocalDateTime date,
-            Map<Integer, List<Interval>> calendar) {
+                                                                   Map<Integer, List<Interval>> calendar) {
         if (vehicleId == null || date == null)
             return date;
         List<Interval> intervals = calendar.get(vehicleId);
@@ -133,7 +133,7 @@ public class AssignmentService {
     }
 
     private static boolean isVehicleFreeOverall(Integer vehiculeId, LocalDateTime start, LocalDateTime end,
-            Map<Integer, List<Interval>> occupiedCalendar, Map<Integer, List<Interval>> tentativeCalendar) {
+                                                Map<Integer, List<Interval>> occupiedCalendar, Map<Integer, List<Interval>> tentativeCalendar) {
         if (vehiculeId == null)
             return false;
         if (!isVehicleFree(vehiculeId, start, end, occupiedCalendar))
@@ -352,19 +352,52 @@ public class AssignmentService {
                 reservationsAssignees.add(premiereReservation.getId());
             }
 
-            // Cleanup remainingReservations
-            // If assigned (fully), remove from list.
-            // If split (partially), it stays in list but modified.
-            // If failed, remove from list (added to reservationsAssignees).
+            if (!candidats.isEmpty()) {
+                try {
+                    groupVehicles(candidats);
+                } catch (Exception e) {
+                    System.out.println("[WARN] groupVehicles a échoué: " + e.getMessage());
+                }
 
-            // Logic to remove assigned ones
+                tentativeCalendar.clear();
+                for (TrajetCandidat c : candidats) {
+                    if (c == null || c.getVehicule() == null || c.getHeureDepart() == null || c.getHeureArrivee() == null) continue;
+                    addIntervalToCalendar(c.getVehicule().getId(), c.getHeureDepart(), c.getHeureArrivee(), tentativeCalendar);
+                }
+
+                Iterator<TrajetCandidat> it = candidats.iterator();
+                while (it.hasNext()) {
+                    TrajetCandidat c = it.next();
+                    if (c == null) {
+                        it.remove();
+                        continue;
+                    }
+                    try {
+                        TripTiming nt = calculateTripTiming(c.getVehicule(), c.getHeureDepart(), c.getReservations(), c.getOrdreVisites());
+                        if (nt == null) {
+                            it.remove();
+                            continue;
+                        }
+                        c.setHeureDepart(nt.getHeureDepart());
+                        c.setHeureArrivee(nt.getHeureArrivee());
+                        c.setDistanceTotale(nt.getDistanceTotale());
+                    } catch (Exception ex) {
+                        System.out.println("[WARN] recalcul timing candidat échoué: " + ex.getMessage());
+                        it.remove();
+                    }
+                }
+
+                tentativeCalendar.clear();
+                for (TrajetCandidat c : candidats) {
+                    if (c == null || c.getVehicule() == null || c.getHeureDepart() == null || c.getHeureArrivee() == null) continue;
+                    addIntervalToCalendar(c.getVehicule().getId(), c.getHeureDepart(), c.getHeureArrivee(), tentativeCalendar);
+                }
+            }
+
             Iterator<ReservationDTO> remIt = remainingReservations.iterator();
             while (remIt.hasNext()) {
                 ReservationDTO r = remIt.next();
                 if (reservationsAssignees.contains(r.getId())) {
-                    remIt.remove();
-                } else if (!assignedThisReservation && r == premiereReservation) {
-                    // Avoid infinite loop if failed to assign
                     remIt.remove();
                 }
             }
@@ -375,44 +408,27 @@ public class AssignmentService {
                 c1.getReservations().size()));
 
         List<Trajet> trajetsCreated = new ArrayList<>();
-        Set<Integer> reservationsSauvegardees = new HashSet<>();
 
+        Map<Integer, List<Interval>> occupiedToSave = copyCalendar(occupiedCalendar);
         for (TrajetCandidat candidat : candidats) {
-            boolean toutesDisponibles = true;
-            for (ReservationDTO r : candidat.getReservations()) {
-                if (reservationsSauvegardees.contains(r.getId())) {
-                    // Check if it's partly saved or fully?
-                    // Actually with splitting, multiple fragments can have same ID.
-                    // But here we need to persist EACH fragment.
-                    // The check "reservationsSauvegardees.contains" was to avoid re-saving same
-                    // reservation if allocated multiple times?
-                    // In previous logic (full allocation), yes.
-                    // With partial allocation, we can have multiple fragments for same ID.
-                    // But each fragment belongs to a different vehicle/trajet.
-                    // We should allow saving multiple times if they are fragments.
-                    // BUT "reservationsSauvegardees" logic might be wrong here for partial
-                    // allocation.
-                    // We need to track HOW MANY passengers saved per ID.
+            if (candidat == null || candidat.getVehicule() == null || candidat.getHeureDepart() == null || candidat.getHeureArrivee() == null) continue;
+            Integer vid = candidat.getVehicule().getId();
+            LocalDateTime start = candidat.getHeureDepart();
+            LocalDateTime end = candidat.getHeureArrivee();
 
-                    // However, candidat lists are distinct allocations made during the loop.
-                    // If logic is correct, we shouldn't have overlapping usage of same passenger
-                    // unit.
-                    // So we can probably remove this check or adapt it.
-                    // Let's remove the check for now or make it smarter (check total count).
-
-                    // For now, let's allow saving even if present, because splitting.
-                    // But we should be careful about duplicates if any.
-                    // Given the loop structure, unique allocations.
-                }
+            if (!isVehicleFree(vid, start, end, occupiedToSave)) {
+                System.out.println("[SAVE] skip candidat veh=" + vid + " start=" + start + " end=" + end + " cause overlap with occupiedToSave=" + formatIntervals(occupiedToSave.get(vid)));
+                continue;
             }
 
-            // To avoid double saving if code had bugs:
-            // But we trust our split logic.
+            if (candidat.getReservations() == null || candidat.getReservations().isEmpty()) {
+                System.out.println("[SAVE] skip candidat empty reservations");
+                continue;
+            }
+
             Trajet trajet = saveTrajet(candidat, date);
             trajetsCreated.add(trajet);
-            for (ReservationDTO r : candidat.getReservations()) {
-                reservationsSauvegardees.add(r.getId());
-            }
+            addIntervalToCalendar(vid, start, end, occupiedToSave);
         }
 
         // Return original POJOs for non assigned
@@ -443,7 +459,7 @@ public class AssignmentService {
     }
 
     private GroupeReservation findOptimalWaitingGroup(Vehicule vehicule, Map<Integer, List<Interval>> calendar,
-            List<ReservationDTO> disponibles)
+                                                      List<ReservationDTO> disponibles)
             throws Exception {
         GroupeReservation groupeVide = new GroupeReservation();
         groupeVide.setReservations(new ArrayList<>());
@@ -538,7 +554,7 @@ public class AssignmentService {
     }
 
     private List<ReservationDTO> buildGroupAtDeparture(Vehicule vehicule, ReservationDTO premiere,
-            List<ReservationDTO> disponibles, LocalDateTime departCandidat) {
+                                                       List<ReservationDTO> disponibles, LocalDateTime departCandidat) {
         List<ReservationDTO> groupe = new ArrayList<>();
         int capaciteTotale = 0;
 
@@ -590,7 +606,7 @@ public class AssignmentService {
     }
 
     private TrajetCandidat optimizeRoute(Vehicule vehicule, LocalDateTime heureArriveeVehicule,
-            List<ReservationDTO> groupe, Lieux aeroport) throws Exception {
+                                         List<ReservationDTO> groupe, Lieux aeroport) throws Exception {
         List<String> ordreVisites = new ArrayList<>();
         ordreVisites.add(aeroport.getCode());
 
@@ -700,7 +716,7 @@ public class AssignmentService {
     }
 
     private TripTiming calculateTripTiming(Vehicule v, LocalDateTime heureArriveeVehicule, List<ReservationDTO> groupe,
-            List<String> ordre) throws Exception {
+                                           List<String> ordre) throws Exception {
         if (groupe == null || groupe.isEmpty() || ordre == null || ordre.size() < 2)
             return null;
 
@@ -744,7 +760,7 @@ public class AssignmentService {
     }
 
     private Vehicule findBestVehicle(ReservationDTO reservation, List<TrajetCandidat> candidats,
-            List<Vehicule> disponibles) {
+                                     List<Vehicule> disponibles) {
         if (reservation == null || disponibles == null || disponibles.isEmpty())
             return null;
 
@@ -824,7 +840,7 @@ public class AssignmentService {
     }
 
     private Vehicule selectBestVehicleFromCandidates(List<Vehicule> candidates, List<TrajetCandidat> existingCandidats,
-            int neededCapacity) {
+                                                     int neededCapacity) {
         int capaciteMin = Integer.MAX_VALUE;
         for (Vehicule v : candidates)
             if (v.getNbrPlace() < capaciteMin)
@@ -953,7 +969,7 @@ public class AssignmentService {
                 System.out.println("groupVehicles: comparaison autre depart=" + od + " inWindow=" + inWindow + " (base="
                         + windowStart + ") vehicule="
                         + (other.getVehicule() != null ? other.getVehicule().getId() : null));
-                if (inWindow) {
+                if( inWindow) {
                     group.add(other);
                 }
             }
@@ -1047,5 +1063,30 @@ public class AssignmentService {
         }
 
         return trajet;
+    }
+
+    private static String formatIntervals(List<Interval> list) {
+        if (list == null || list.isEmpty()) return "[]";
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (Interval iv : list) {
+            sb.append(iv.start).append("->").append(iv.end).append(",");
+        }
+        if (sb.charAt(sb.length() - 1) == ',') sb.setLength(sb.length() - 1);
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private static void logOverlaps(Integer vehId, LocalDateTime start, LocalDateTime end, Map<Integer, List<Interval>> calendar, String name) {
+        List<Interval> list = calendar.get(vehId);
+        if (list == null || list.isEmpty()) {
+            System.out.println("[CALENDAR] " + name + " empty for veh=" + vehId);
+            return;
+        }
+        for (Interval iv : list) {
+            if (overlaps(start, end, iv.start, iv.end)) {
+                System.out.println("[CALENDAR] overlap with " + name + " veh=" + vehId + " interval=" + iv.start + "->" + iv.end);
+            }
+        }
     }
 }

@@ -248,9 +248,6 @@ public class AssignmentService {
                     fragment.setTempsAttenteMax(premiereReservation.getTempsAttenteMax());
                     fragment.setNb_passager(toAllocate);
 
-                    // Update original (remaining)
-                    premiereReservation.setNb_passager(premiereReservation.getNb_passager() - toAllocate);
-
                     // Use fragment for this iteration
                     List<ReservationDTO> singleFragmentList = new ArrayList<>();
                     singleFragmentList.add(fragment);
@@ -286,7 +283,16 @@ public class AssignmentService {
                             tentativeCalendar) && meilleurVehicule.estDispo(end) && meilleurVehicule.estDispo(start)) {
                         candidats.add(candidat);
                         // Do not add to reservationsAssignees yet because the original is still pending
-                        // with remaining passengers
+                        // with remaining passengers. Decrement only once in remainingReservations.
+                        Integer allocated = fragment.getNb_passager();
+                        for (ReservationDTO remDto : remainingReservations) {
+                            if (remDto.getId().equals(fragment.getId())) {
+                                int current = remDto.getNb_passager() != null ? remDto.getNb_passager() : 0;
+                                remDto.setNb_passager(Math.max(0, current - allocated));
+                                break;
+                            }
+                        }
+
                         addIntervalToCalendar(meilleurVehicule.getId(), start, end, tentativeCalendar);
 
                         // Because we split, we don't mark assignedThisReservation=true for the MAIN
@@ -338,8 +344,24 @@ public class AssignmentService {
                     if (isVehicleFreeOverall(meilleurVehicule.getId(), start, end, occupiedCalendar,
                             tentativeCalendar) && meilleurVehicule.estDispo(end) && meilleurVehicule.estDispo(start)) {
                         candidats.add(candidat);
-                        for (ReservationDTO r : groupe)
+                        for (ReservationDTO r : groupe) {
                             reservationsAssignees.add(r.getId());
+                            // Update logic for split
+                            // The 'r' here is the group fragment.
+                            // We need to decrease the original 'remaining' object from
+                            // remainingReservations.
+                            Integer fragmentSize = r.getNb_passager();
+                            for (ReservationDTO remDto : remainingReservations) {
+                                if (remDto.getId().equals(r.getId())) {
+                                    if (remDto.getNb_passager() > fragmentSize) {
+                                        remDto.setNb_passager(remDto.getNb_passager() - fragmentSize);
+                                    } else {
+                                        remDto.setNb_passager(0);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
                         addIntervalToCalendar(meilleurVehicule.getId(), start, end, tentativeCalendar);
                         assignedThisReservation = true;
                     } else {
@@ -458,11 +480,55 @@ public class AssignmentService {
             if (dto.getNb_passager() > 0) {
                 // Find original entity to return correct type, but update its passenger count?
                 // Or just creating dummy entity?
-                // Let's match with id.
+                // Match with id to find the original entity
                 for (Reservation r : reservationsDisponibles) {
                     if (r.getId().equals(dto.getId())) {
                         r.setNbPassager(dto.getNb_passager()); // Update with remaining
                         reservationsNonAssignees.add(r);
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Add failed reservations (never assigned) with their *initial* count unless
+        // modified?
+        // Actually if they are in failedReservations, they might still be in
+        // remainingReservations list if we didn't remove them.
+        // But above loop iterates remainingReservations.
+        // If they were removed from remainingReservations because of failure, we need
+        // to add them back.
+        // Wait, loop above iterates remainingReservations.
+        // In the main loop, if failed, we removed it from remainingReservations (in
+        // previous fix attempt I removed it?).
+        // Actually, my fix removed it from the ITERATOR, so it IS removed from
+        // remainingReservations list.
+        // So we need to recover them.
+
+        for (Integer failedId : failedReservations) {
+            // Find in original DTOs map or list
+            boolean alreadyAdded = false;
+            for (Reservation res : reservationsNonAssignees) {
+                if (res.getId().equals(failedId)) {
+                    alreadyAdded = true;
+                    break;
+                }
+            }
+            if (!alreadyAdded) {
+                for (Reservation r : reservationsDisponibles) {
+                    if (r.getId().equals(failedId)) {
+                        // We need the CURRENT remaining passengers for this one.
+                        // Where is it stored? In the DTO that was removed.
+                        // We should probably find the DTO in reservationDtos list (which was the
+                        // source).
+                        // reservationDtos list contains the DTO objects which were modified in place.
+                        for (ReservationDTO dto : reservationDtos) {
+                            if (dto.getId().equals(failedId)) {
+                                r.setNbPassager(dto.getNb_passager());
+                                reservationsNonAssignees.add(r);
+                                break;
+                            }
+                        }
                         break;
                     }
                 }
@@ -526,6 +592,7 @@ public class AssignmentService {
         List<ReservationDTO> meilleurGroupe = new ArrayList<>();
         int meilleurNbPassagers = -1;
         int meilleurNbReservations = -1;
+        int meilleurWaste = Integer.MAX_VALUE;
         LocalDateTime meilleurDepart = null;
 
         for (LocalDateTime departCandidat : pointsDepart) {
@@ -535,27 +602,47 @@ public class AssignmentService {
                 continue;
 
             int nbPassagers = 0;
+            int waste = 0;
             for (ReservationDTO reservation : groupeCandidat) {
                 if (reservation.getNb_passager() != null) {
                     nbPassagers += reservation.getNb_passager();
+                    // Calculate waste if this is a fragment/split
+                    // We need to find the original to compare sizes, or infer it?
+                    // Since buildGroupAtDeparture creates NEW objects for fragments,
+                    // we can't easily rely on object identity to find original in 'disponibles'.
+                    // But we can match by ID.
+                    for (ReservationDTO orig : disponibles) {
+                        if (orig.getId().equals(reservation.getId())) {
+                            if (orig.getNb_passager() > reservation.getNb_passager()) {
+                                waste += (orig.getNb_passager() - reservation.getNb_passager());
+                            }
+                            break;
+                        }
+                    }
                 }
             }
 
             boolean meilleur = false;
             if (nbPassagers > meilleurNbPassagers) {
                 meilleur = true;
-            } else if (nbPassagers == meilleurNbPassagers
-                    && groupeCandidat.size() > meilleurNbReservations) {
-                meilleur = true;
-            } else if (nbPassagers == meilleurNbPassagers
-                    && groupeCandidat.size() == meilleurNbReservations
-                    && (meilleurDepart == null || departCandidat.isBefore(meilleurDepart))) {
-                meilleur = true;
+            } else if (nbPassagers == meilleurNbPassagers) {
+                // Tie breaker: Minimize waste (leftover passengers from split)
+                if (waste < meilleurWaste) {
+                    meilleur = true;
+                } else if (waste == meilleurWaste) {
+                    if (groupeCandidat.size() > meilleurNbReservations) {
+                        meilleur = true;
+                    } else if (groupeCandidat.size() == meilleurNbReservations
+                            && (meilleurDepart == null || departCandidat.isBefore(meilleurDepart))) {
+                        meilleur = true;
+                    }
+                }
             }
 
             if (meilleur) {
                 meilleurNbPassagers = nbPassagers;
                 meilleurNbReservations = groupeCandidat.size();
+                meilleurWaste = waste;
                 meilleurDepart = departCandidat;
                 meilleurGroupe = groupeCandidat;
             }
@@ -584,7 +671,7 @@ public class AssignmentService {
         if (firstCapacity > vehicule.getNbrPlace())
             return new ArrayList<>(); // Too big
 
-        groupe.add(premiere);
+        groupe.add(copyReservationDto(premiere));
         capaciteTotale = firstCapacity;
 
         List<ReservationDTO> candidates = new ArrayList<>();
@@ -628,20 +715,26 @@ public class AssignmentService {
             }
 
             if (bestMatch != null) {
-                groupe.add(bestMatch);
+                groupe.add(copyReservationDto(bestMatch));
                 addedIds.add(bestMatch.getId());
                 capaciteTotale += bestMatch.getNb_passager();
             } else {
                 // Try to split a larger reservation to fill the remaining space
                 ReservationDTO splitCandidate = null;
                 // Prioritize largest to fill? Or just first available?
-                // Let's pick the one that has enough to fill.
+
+                // We want to find the one CLOSEST to remaining but LARGER than remaining
+                int bestSplitDiff = Integer.MAX_VALUE;
+
                 for (ReservationDTO cand : candidates) {
                     if (addedIds.contains(cand.getId()))
                         continue;
                     if (cand.getNb_passager() != null && cand.getNb_passager() > remaining) {
-                        splitCandidate = cand;
-                        break;
+                        int diff = cand.getNb_passager() - remaining;
+                        if (diff < bestSplitDiff) {
+                            bestSplitDiff = diff;
+                            splitCandidate = cand;
+                        }
                     }
                 }
 
@@ -657,8 +750,24 @@ public class AssignmentService {
                     fragment.setTempsAttenteMax(splitCandidate.getTempsAttenteMax());
                     fragment.setNb_passager(remaining);
 
-                    // Decrement original
-                    splitCandidate.setNb_passager(splitCandidate.getNb_passager() - remaining);
+                    // Decrement original (NOT HERE, we are inside a simulation method that is
+                    // called multiple times)
+                    // We must return the fragment, but we should not permanently modify the
+                    // candidate in the simulation phase.
+                    // However, the caller expects a valid group.
+                    // The 'candidates' list comes from 'disponibles', which is passed from
+                    // 'findOptimalWaitingGroup'.
+                    // 'findOptimalWaitingGroup' gets 'disponiblesPourTraitement'.
+                    // If we modify 'disponibles', we corrupt the state for other 'departCandidat'
+                    // iterations.
+
+                    // To avoid corruption, we don't modify the source 'splitCandidate' here.
+                    // We just use the fragment.
+                    // But in 'assignVehicles', when we commit the group, we need to know we have to
+                    // reduce the original.
+                    // The 'assignVehicles' logic iterates over the chosen group and updates
+                    // 'reservationsAssignees'.
+                    // We need to implement logic in 'assignVehicles' to handle this update.
 
                     groupe.add(fragment);
                     addedIds.add(splitCandidate.getId());
@@ -668,6 +777,19 @@ public class AssignmentService {
             }
         }
         return groupe;
+    }
+
+    private ReservationDTO copyReservationDto(ReservationDTO source) {
+        ReservationDTO copy = new ReservationDTO();
+        copy.setId(source.getId());
+        copy.setId_client(source.getId_client());
+        copy.setId_hotel(source.getId_hotel());
+        copy.setNom_hotel(source.getNom_hotel());
+        copy.setDateHeureArrivee(source.getDateHeureArrivee());
+        copy.setDate_reservation(source.getDate_reservation());
+        copy.setTempsAttenteMax(source.getTempsAttenteMax());
+        copy.setNb_passager(source.getNb_passager());
+        return copy;
     }
 
     private TrajetCandidat optimizeRoute(Vehicule vehicule, LocalDateTime heureArriveeVehicule,

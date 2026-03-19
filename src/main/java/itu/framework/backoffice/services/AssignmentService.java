@@ -589,10 +589,6 @@ public class AssignmentService {
         return groupe;
     }
 
-    }}
-
-    return groupe;}
-
     private TrajetCandidat optimizeRoute(Vehicule vehicule, LocalDateTime heureArriveeVehicule,
             List<ReservationDTO> groupe, Lieux aeroport) throws Exception {
         List<String> ordreVisites = new ArrayList<>();
@@ -619,7 +615,7 @@ public class AssignmentService {
             // object identity.
             // But reservation IDs are Integers from DB.
             nonVisites.add(reservation.getId());
-            Lieux hotel = (Lieux) new Reservation().getForeignKey("id_hotel", reservation.getId_hotel());
+            Lieux hotel = null;
             // Need a way to get Lieux from ID efficiently or mock it
             // The DTO has id_hotel.
             // We can use Lieux.findById(id) or similar if available.
@@ -635,7 +631,7 @@ public class AssignmentService {
             // Let's implement a quick helper or fetch it.
             if (hotel == null) {
                 // Fallback: fetch from DB
-                String sql = "SELECT * FROM lieux WHERE id = ?";
+                String sql = "SELECT * FROM hotel WHERE id = ?";
                 List<Lieux> res = Lieux.fetch(Lieux.class, sql, reservation.getId_hotel());
                 if (!res.isEmpty())
                     hotel = res.get(0);

@@ -1,0 +1,1 @@
+ALTER TABLE trajet_reservation ADD COLUMN nbr_passager INTEGER;

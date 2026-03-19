@@ -1037,14 +1037,15 @@ public class AssignmentService {
 
         trajet = (Trajet) trajet.save();
 
-        List<Reservation> reservations = candidat.getReservations();
+        List<ReservationDTO> reservations = candidat.getReservations();
         for (int i = 0; i < reservations.size(); i++) {
-            Reservation reservation = reservations.get(i);
+            ReservationDTO reservation = reservations.get(i);
 
             TrajetReservation tr = new TrajetReservation();
             tr.setIdTrajet(trajet.getId().intValue());
             tr.setIdReservation(reservation.getId());
             tr.setOrdreVisite(i + 1);
+            tr.setNbrPassager(reservation.getNb_passager());
 
             tr.save();
         }

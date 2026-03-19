@@ -24,8 +24,19 @@ public class TrajetReservation extends BaseEntity {
     @ForeignKey(mappedBy = "reservation", entity = Reservation.class)
     private Integer idReservation;
 
+    @Column(name = "nbr_passager")
+    private Integer nbrPassager;
+
     @Column(name = "ordre_visite")
     private Integer ordreVisite; // 1er arrêt, 2e arrêt, etc
+
+    public Integer getNbrPassager() {
+        return nbrPassager;
+    }
+
+    public void setNbrPassager(Integer nbrPassager) {
+        this.nbrPassager = nbrPassager;
+    }
 
     public static List<TrajetReservation> findByTrajet(Integer idTrajet) throws Exception {
         if (idTrajet == null) {

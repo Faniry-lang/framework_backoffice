@@ -1,5 +1,6 @@
 package itu.framework.backoffice.services;
 
+import itu.framework.backoffice.dtos.ReservationDTO;
 import itu.framework.backoffice.entities.*;
 import itu.framework.backoffice.models.AssignmentResult;
 import itu.framework.backoffice.models.GroupeReservation;
@@ -26,19 +27,20 @@ public class AssignmentService {
     }
 
     private static boolean overlaps(LocalDateTime aStart, LocalDateTime aEnd, LocalDateTime bStart,
-                                    LocalDateTime bEnd) {
+            LocalDateTime bEnd) {
         if (aStart == null || aEnd == null || bStart == null || bEnd == null)
             return false;
         return !(aEnd.isBefore(bStart) || aEnd.isEqual(bStart) || aStart.isAfter(bEnd) || aStart.isEqual(bEnd));
     }
 
     private static boolean isDateBetween(LocalDateTime start, LocalDateTime end, LocalDateTime date) {
-        if (start == null || end == null || date == null) return false;
+        if (start == null || end == null || date == null)
+            return false;
         return (start.isBefore(date) || start.isEqual(date)) && end.isAfter(date);
     }
 
     private static boolean isVehicleFree(Integer vehiculeId, LocalDateTime start, LocalDateTime end,
-                                         Map<Integer, List<Interval>> calendar) {
+            Map<Integer, List<Interval>> calendar) {
         if (start == null || end == null)
             return false;
         List<Interval> list = calendar.get(vehiculeId);
@@ -52,7 +54,7 @@ public class AssignmentService {
     }
 
     private static void addIntervalToCalendar(Integer vehiculeId, LocalDateTime start, LocalDateTime end,
-                                              Map<Integer, List<Interval>> calendar) {
+            Map<Integer, List<Interval>> calendar) {
         if (vehiculeId == null || start == null || end == null)
             return;
         List<Interval> list = calendar.computeIfAbsent(vehiculeId, k -> new ArrayList<>());
@@ -86,10 +88,13 @@ public class AssignmentService {
         return 1;
     }
 
-    private static LocalDateTime getClosestAvailableDateForVehicle(Integer vehicleId, LocalDateTime date, Map<Integer, List<Interval>> calendar) {
-        if (vehicleId == null || date == null) return date;
+    private static LocalDateTime getClosestAvailableDateForVehicle(Integer vehicleId, LocalDateTime date,
+            Map<Integer, List<Interval>> calendar) {
+        if (vehicleId == null || date == null)
+            return date;
         List<Interval> intervals = calendar.get(vehicleId);
-        if (intervals == null || intervals.isEmpty()) return date;
+        if (intervals == null || intervals.isEmpty())
+            return date;
         intervals.sort(Comparator.comparing(i -> i.start));
         for (Interval iv : intervals) {
             if (isDateBetween(iv.start, iv.end, date) || iv.start.isEqual(date)) {
@@ -104,7 +109,8 @@ public class AssignmentService {
 
     private static Map<Integer, List<Interval>> copyCalendar(Map<Integer, List<Interval>> src) {
         Map<Integer, List<Interval>> copy = new HashMap<>();
-        if (src == null) return copy;
+        if (src == null)
+            return copy;
         for (Map.Entry<Integer, List<Interval>> e : src.entrySet()) {
             List<Interval> list = new ArrayList<>();
             for (Interval iv : e.getValue()) {
@@ -116,15 +122,33 @@ public class AssignmentService {
     }
 
     private static boolean isVehicleFreeOverall(Integer vehiculeId, LocalDateTime start, LocalDateTime end,
-                                                Map<Integer, List<Interval>> occupiedCalendar, Map<Integer, List<Interval>> tentativeCalendar) {
-        if (vehiculeId == null) return false;
-        if (!isVehicleFree(vehiculeId, start, end, occupiedCalendar)) return false;
-        if (!isVehicleFree(vehiculeId, start, end, tentativeCalendar)) return false;
+            Map<Integer, List<Interval>> occupiedCalendar, Map<Integer, List<Interval>> tentativeCalendar) {
+        if (vehiculeId == null)
+            return false;
+        if (!isVehicleFree(vehiculeId, start, end, occupiedCalendar))
+            return false;
+        if (!isVehicleFree(vehiculeId, start, end, tentativeCalendar))
+            return false;
         return true;
     }
 
     public AssignmentResult assignVehicles(LocalDate date) throws Exception {
         List<Reservation> reservationsDisponibles = Reservation.findUnassignedByDate(date);
+
+        // Phase 1: Convert to DTO and initialize tracking maps
+        List<ReservationDTO> reservationDtos = new ArrayList<>();
+        Map<Integer, Integer> remainingPassengers = new HashMap<>();
+        Map<Integer, Integer> originalPassengers = new HashMap<>();
+
+        for (Reservation r : reservationsDisponibles) {
+            ReservationDTO dto = r.toDto();
+            reservationDtos.add(dto);
+            if (dto.getId() != null) {
+                remainingPassengers.put(dto.getId(), dto.getNb_passager());
+                originalPassengers.put(dto.getId(), dto.getNb_passager());
+            }
+        }
+
         reservationsDisponibles.sort(
                 Comparator.comparingInt(AssignmentService::getPassengerPriorityScore).reversed()
                         .thenComparing(Reservation::getNbPassager, Comparator.nullsLast(Comparator.reverseOrder()))
@@ -176,15 +200,18 @@ public class AssignmentService {
                     break;
                 }
 
-                GroupeReservation groupeReservation = findOptimalWaitingGroup(meilleurVehicule, tentativeCalendar, disponiblesPourTraitement);
+                GroupeReservation groupeReservation = findOptimalWaitingGroup(meilleurVehicule, tentativeCalendar,
+                        disponiblesPourTraitement);
                 List<Reservation> groupe = groupeReservation.getReservations();
                 if (groupe.isEmpty()) {
                     vehiculesCandidates.remove(meilleurVehicule);
                     continue;
                 }
 
-                TrajetCandidat candidat = optimizeRoute(meilleurVehicule, groupeReservation.getHeureArriveeVehicule(), groupe, aeroport);
-                TripTiming timing = calculateTripTiming(meilleurVehicule, groupeReservation.getHeureArriveeVehicule(), groupe, candidat.getOrdreVisites());
+                TrajetCandidat candidat = optimizeRoute(meilleurVehicule, groupeReservation.getHeureArriveeVehicule(),
+                        groupe, aeroport);
+                TripTiming timing = calculateTripTiming(meilleurVehicule, groupeReservation.getHeureArriveeVehicule(),
+                        groupe, candidat.getOrdreVisites());
                 if (timing != null) {
                     candidat.setHeureDepart(timing.getHeureDepart());
                     candidat.setHeureArrivee(timing.getHeureArrivee());
@@ -218,9 +245,11 @@ public class AssignmentService {
 
                 tentativeCalendar.clear();
                 for (TrajetCandidat c : candidats) {
-                    if (c == null || c.getVehicule() == null || c.getHeureDepart() == null || c.getHeureArrivee() == null)
+                    if (c == null || c.getVehicule() == null || c.getHeureDepart() == null
+                            || c.getHeureArrivee() == null)
                         continue;
-                    addIntervalToCalendar(c.getVehicule().getId(), c.getHeureDepart(), c.getHeureArrivee(), tentativeCalendar);
+                    addIntervalToCalendar(c.getVehicule().getId(), c.getHeureDepart(), c.getHeureArrivee(),
+                            tentativeCalendar);
                 }
 
                 Iterator<TrajetCandidat> it = candidats.iterator();
@@ -251,9 +280,11 @@ public class AssignmentService {
 
                 tentativeCalendar.clear();
                 for (TrajetCandidat c : candidats) {
-                    if (c == null || c.getVehicule() == null || c.getHeureDepart() == null || c.getHeureArrivee() == null)
+                    if (c == null || c.getVehicule() == null || c.getHeureDepart() == null
+                            || c.getHeureArrivee() == null)
                         continue;
-                    addIntervalToCalendar(c.getVehicule().getId(), c.getHeureDepart(), c.getHeureArrivee(), tentativeCalendar);
+                    addIntervalToCalendar(c.getVehicule().getId(), c.getHeureDepart(), c.getHeureArrivee(),
+                            tentativeCalendar);
                 }
             }
 
@@ -299,7 +330,8 @@ public class AssignmentService {
         return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
     }
 
-    private GroupeReservation findOptimalWaitingGroup(Vehicule vehicule, Map<Integer, List<Interval>> calendar, List<Reservation> disponibles)
+    private GroupeReservation findOptimalWaitingGroup(Vehicule vehicule, Map<Integer, List<Interval>> calendar,
+            List<Reservation> disponibles)
             throws Exception {
         GroupeReservation groupeVide = new GroupeReservation();
         groupeVide.setReservations(new ArrayList<>());
@@ -325,7 +357,8 @@ public class AssignmentService {
         LocalDateTime heureArrivee = getClosestAvailableDateForVehicle(vehicule.getId(), heurePremiere, calendar);
 
         long attenteDeja = Math.max(0, Duration.between(heurePremiere, heureArrivee).toMinutes());
-        Integer tempsAttenteMaxEffectif = premiere.getTempsAttenteMaxEffectif() == null ? 0 : premiere.getTempsAttenteMaxEffectif();
+        Integer tempsAttenteMaxEffectif = premiere.getTempsAttenteMaxEffectif() == null ? 0
+                : premiere.getTempsAttenteMaxEffectif();
         Integer tempsAttenteRestant = tempsAttenteMaxEffectif - (int) attenteDeja;
 
         if (tempsAttenteRestant <= 0) {
@@ -333,12 +366,12 @@ public class AssignmentService {
         }
 
         LocalDateTime limiteAttente = heureArrivee.plusMinutes(tempsAttenteRestant);
-        if(vehicule.getRef().equals("V-002")) {
-            System.out.println("[DEBUG] temps attente restant: "+tempsAttenteRestant);
-            System.out.println("limite attente: "+limiteAttente);
+        if (vehicule.getRef().equals("V-002")) {
+            System.out.println("[DEBUG] temps attente restant: " + tempsAttenteRestant);
+            System.out.println("limite attente: " + limiteAttente);
             System.out.println("disponibles: ");
-            for(Reservation r:disponibles){
-                System.out.println("      "+r.getIdClient());
+            for (Reservation r : disponibles) {
+                System.out.println("      " + r.getIdClient());
             }
             System.out.println("[FIN DEBUG]\n");
         }
@@ -399,7 +432,7 @@ public class AssignmentService {
     }
 
     private List<Reservation> buildGroupAtDeparture(Vehicule vehicule, Reservation premiere,
-                                                    List<Reservation> disponibles, LocalDateTime departCandidat) {
+            List<Reservation> disponibles, LocalDateTime departCandidat) {
         List<Reservation> groupe = new ArrayList<>();
         int capaciteTotale = 0;
 
@@ -443,7 +476,8 @@ public class AssignmentService {
         return groupe;
     }
 
-    private TrajetCandidat optimizeRoute(Vehicule vehicule, LocalDateTime heureArriveeVehicule, List<Reservation> groupe, Lieux aeroport) throws Exception {
+    private TrajetCandidat optimizeRoute(Vehicule vehicule, LocalDateTime heureArriveeVehicule,
+            List<Reservation> groupe, Lieux aeroport) throws Exception {
         List<String> ordreVisites = new ArrayList<>();
         ordreVisites.add(aeroport.getCode());
 
@@ -493,15 +527,18 @@ public class AssignmentService {
 
         ordreVisites.add(aeroport.getCode());
 
-        Optional<Reservation> reservationLaPlusTard = groupe.stream().max(Comparator.comparing(Reservation::getDateHeureArrivee));
-        if (!reservationLaPlusTard.isPresent()) throw new Exception("Erreur lors de l'obtention de la réservation la plus tardive");
+        Optional<Reservation> reservationLaPlusTard = groupe.stream()
+                .max(Comparator.comparing(Reservation::getDateHeureArrivee));
+        if (!reservationLaPlusTard.isPresent())
+            throw new Exception("Erreur lors de l'obtention de la réservation la plus tardive");
         LocalDateTime lastArrival = reservationLaPlusTard.get().getDateHeureArrivee();
         LocalDateTime heureDepart = heureArriveeVehicule != null ? heureArriveeVehicule : lastArrival;
         if (heureDepart.isBefore(lastArrival)) {
             heureDepart = lastArrival;
         }
 
-        double vitesse = vehicule.getVitesseMoyenne() == null || vehicule.getVitesseMoyenne() <= 0.0 ? 60.0 : vehicule.getVitesseMoyenne();
+        double vitesse = vehicule.getVitesseMoyenne() == null || vehicule.getVitesseMoyenne() <= 0.0 ? 60.0
+                : vehicule.getVitesseMoyenne();
         double minutesTrajet = distanceTotal.doubleValue() / vitesse * 60.0;
         long minutesArrondis = (long) Math.ceil(minutesTrajet);
         LocalDateTime heureArrivee = heureDepart.plusMinutes(minutesArrondis);
@@ -509,11 +546,14 @@ public class AssignmentService {
         return new TrajetCandidat(vehicule, groupe, heureDepart, heureArrivee, distanceTotal, ordreVisites);
     }
 
-    private TripTiming calculateTripTiming(Vehicule v, LocalDateTime heureArriveeVehicule, List<Reservation> groupe, List<String> ordre) throws Exception {
+    private TripTiming calculateTripTiming(Vehicule v, LocalDateTime heureArriveeVehicule, List<Reservation> groupe,
+            List<String> ordre) throws Exception {
         if (groupe == null || groupe.isEmpty() || ordre == null || ordre.size() < 2)
             return null;
-        Optional<Reservation> reservationLaPlusTard = groupe.stream().max(Comparator.comparing(Reservation::getDateHeureArrivee));
-        if (!reservationLaPlusTard.isPresent()) throw new Exception("Erreur lors de l'obtention de la réservation la plus tardive");
+        Optional<Reservation> reservationLaPlusTard = groupe.stream()
+                .max(Comparator.comparing(Reservation::getDateHeureArrivee));
+        if (!reservationLaPlusTard.isPresent())
+            throw new Exception("Erreur lors de l'obtention de la réservation la plus tardive");
         LocalDateTime lastArrival = reservationLaPlusTard.get().getDateHeureArrivee();
         LocalDateTime heureDepart = heureArriveeVehicule != null ? heureArriveeVehicule : lastArrival;
         if (heureDepart.isBefore(lastArrival)) {
@@ -668,12 +708,14 @@ public class AssignmentService {
             list.add(tc);
         }
 
-        list.sort(Comparator.comparing(TrajetCandidat::getHeureDepart, Comparator.nullsLast(Comparator.naturalOrder())));
+        list.sort(
+                Comparator.comparing(TrajetCandidat::getHeureDepart, Comparator.nullsLast(Comparator.naturalOrder())));
 
         Set<TrajetCandidat> processed = new HashSet<>();
 
         for (TrajetCandidat base : new ArrayList<>(list)) {
-            if (base == null) continue;
+            if (base == null)
+                continue;
             if (processed.contains(base)) {
                 System.out.println("groupVehicles: base deja traitée, skip: " + base);
                 continue;
@@ -685,7 +727,8 @@ public class AssignmentService {
             }
 
             Integer tempsAttente = base.getTempsAttenteRestant() != null ? base.getTempsAttenteRestant() : 0;
-            System.out.println("groupVehicles: base heureDepart=" + base.getHeureDepart() + " tempsAttenteRestant=" + tempsAttente + " vehicule=" + (base.getVehicule()!=null?base.getVehicule().getId():null));
+            System.out.println("groupVehicles: base heureDepart=" + base.getHeureDepart() + " tempsAttenteRestant="
+                    + tempsAttente + " vehicule=" + (base.getVehicule() != null ? base.getVehicule().getId() : null));
 
             if (tempsAttente <= 0) {
                 System.out.println("groupVehicles: tempsAttente <= 0 pour base, on marque processed et continue");
@@ -700,19 +743,26 @@ public class AssignmentService {
             List<TrajetCandidat> group = new ArrayList<>();
 
             for (TrajetCandidat other : list) {
-                if (other == null) continue;
-                if (other == base) continue;
-                if (processed.contains(other)) continue;
-                if (other.getHeureDepart() == null) continue;
+                if (other == null)
+                    continue;
+                if (other == base)
+                    continue;
+                if (processed.contains(other))
+                    continue;
+                if (other.getHeureDepart() == null)
+                    continue;
                 LocalDateTime od = other.getHeureDepart();
                 boolean inWindow = (!od.isBefore(windowStart)) && (!od.isAfter(windowEnd));
-                System.out.println("groupVehicles: comparaison autre depart=" + od + " inWindow=" + inWindow + " (base=" + windowStart + ") vehicule=" + (other.getVehicule()!=null?other.getVehicule().getId():null));
+                System.out.println("groupVehicles: comparaison autre depart=" + od + " inWindow=" + inWindow + " (base="
+                        + windowStart + ") vehicule="
+                        + (other.getVehicule() != null ? other.getVehicule().getId() : null));
                 if (inWindow) {
                     group.add(other);
                 }
             }
 
-            System.out.println("groupVehicles: pour base depart=" + base.getHeureDepart() + " trouve " + group.size() + " autres candidats");
+            System.out.println("groupVehicles: pour base depart=" + base.getHeureDepart() + " trouve " + group.size()
+                    + " autres candidats");
 
             if (group.isEmpty()) {
                 System.out.println("groupVehicles: aucun candidat à grouper avec base, marquage processed");
@@ -722,7 +772,8 @@ public class AssignmentService {
 
             group.add(base);
 
-            Optional<LocalDateTime> latestOpt = group.stream().map(TrajetCandidat::getHeureDepart).filter(Objects::nonNull).max(Comparator.naturalOrder());
+            Optional<LocalDateTime> latestOpt = group.stream().map(TrajetCandidat::getHeureDepart)
+                    .filter(Objects::nonNull).max(Comparator.naturalOrder());
             if (!latestOpt.isPresent()) {
                 System.out.println("groupVehicles: latestOpt absent, marquage de tout le group comme processed");
                 processed.addAll(group);
@@ -730,36 +781,47 @@ public class AssignmentService {
             }
 
             LocalDateTime newDepart = latestOpt.get();
-            System.out.println("groupVehicles: nouvelle heure de depart après regroupement = " + newDepart + " pour group size=" + group.size());
+            System.out.println("groupVehicles: nouvelle heure de depart après regroupement = " + newDepart
+                    + " pour group size=" + group.size());
 
             for (TrajetCandidat tc : group) {
-                if (tc == null) continue;
+                if (tc == null)
+                    continue;
                 if (tc.getHeureDepart() == null) {
                     System.out.println("groupVehicles: candidat sans heureDepart dans group, marque processed: " + tc);
                     processed.add(tc);
                     continue;
                 }
                 try {
-                    System.out.println("groupVehicles: recalcul timing pour vehicule=" + (tc.getVehicule()!=null?tc.getVehicule().getId():null) + " avec depart=" + newDepart + " reservations=" + (tc.getReservations()!=null?tc.getReservations().size():0));
-                    TripTiming recal = calculateTripTiming(tc.getVehicule(), newDepart, tc.getReservations(), tc.getOrdreVisites());
+                    System.out.println("groupVehicles: recalcul timing pour vehicule="
+                            + (tc.getVehicule() != null ? tc.getVehicule().getId() : null) + " avec depart=" + newDepart
+                            + " reservations=" + (tc.getReservations() != null ? tc.getReservations().size() : 0));
+                    TripTiming recal = calculateTripTiming(tc.getVehicule(), newDepart, tc.getReservations(),
+                            tc.getOrdreVisites());
                     if (recal == null) {
-                        System.out.println("groupVehicles: recalcul a retourné null pour tc=" + tc + "; marquage processed");
+                        System.out.println(
+                                "groupVehicles: recalcul a retourné null pour tc=" + tc + "; marquage processed");
                         processed.add(tc);
                         continue;
                     }
                     tc.setHeureDepart(recal.getHeureDepart());
                     tc.setHeureArrivee(recal.getHeureArrivee());
                     tc.setDistanceTotale(recal.getDistanceTotale());
-                    System.out.println("groupVehicles: recalcul OK pour vehicule=" + (tc.getVehicule()!=null?tc.getVehicule().getId():null) + " newDepart=" + recal.getHeureDepart() + " newArrivee=" + recal.getHeureArrivee() + " distance=" + recal.getDistanceTotale());
+                    System.out.println("groupVehicles: recalcul OK pour vehicule="
+                            + (tc.getVehicule() != null ? tc.getVehicule().getId() : null) + " newDepart="
+                            + recal.getHeureDepart() + " newArrivee=" + recal.getHeureArrivee() + " distance="
+                            + recal.getDistanceTotale());
                     processed.add(tc);
                 } catch (Exception e) {
-                    System.out.println("groupVehicles: exception lors du recalcul timing pour tc=" + tc + " error=" + e.getMessage());
+                    System.out.println("groupVehicles: exception lors du recalcul timing pour tc=" + tc + " error="
+                            + e.getMessage());
                     processed.add(tc);
                 }
             }
         }
 
-        System.out.println("groupVehicles: processing terminé, processed count=" + list.stream().filter(processed::contains).count());
+        System.out.println("groupVehicles: processing terminé, processed count="
+                + list.stream().filter(processed::contains).count());
         System.out.println("groupVehicles: fin de la fonction");
     }
 

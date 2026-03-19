@@ -24,19 +24,11 @@ public class TrajetReservation extends BaseEntity {
     @ForeignKey(mappedBy = "reservation", entity = Reservation.class)
     private Integer idReservation;
 
-    @Column(name = "nbr_passager")
-    private Integer nbrPassager;
-
     @Column(name = "ordre_visite")
     private Integer ordreVisite; // 1er arrêt, 2e arrêt, etc
 
-    public Integer getNbrPassager() {
-        return nbrPassager;
-    }
-
-    public void setNbrPassager(Integer nbrPassager) {
-        this.nbrPassager = nbrPassager;
-    }
+    @Column(name = "nbr_passager")
+    private Integer nbrPassager; // nombre de passagers pour cette réservation dans le trajet
 
     public static List<TrajetReservation> findByTrajet(Integer idTrajet) throws Exception {
         if (idTrajet == null) {
@@ -93,6 +85,14 @@ public class TrajetReservation extends BaseEntity {
 
     public void setOrdreVisite(Integer ordreVisite) {
         this.ordreVisite = ordreVisite;
+    }
+
+    public Integer getNbrPassager() {
+        return nbrPassager;
+    }
+
+    public void setNbrPassager(Integer nbrPassager) {
+        this.nbrPassager = nbrPassager;
     }
 
     // public static List<TrajetReservation> findByTrajet(Integer idTrajet) throws

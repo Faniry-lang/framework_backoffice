@@ -99,10 +99,13 @@ public class Reservation extends BaseEntity {
 
     public ReservationDTO toDto() throws Exception {
         ReservationDTO dto = new ReservationDTO();
+        dto.setId(this.getId());
         dto.setId_client(this.getIdClient());
         dto.setNb_passager(this.getNbPassager());
         dto.setNom_hotel(((Lieux) this.getForeignKey("id_hotel")).getNom());
+        dto.setId_hotel(this.getIdHotel());
         dto.setDate_reservation(this.getDateHeureArrivee().toString());
+        dto.setDateHeureArrivee(this.getDateHeureArrivee());
         dto.setTempsAttenteMax(this.getTempsAttenteMax());
         return dto;
     }

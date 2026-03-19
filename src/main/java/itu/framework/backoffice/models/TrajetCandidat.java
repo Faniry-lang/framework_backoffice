@@ -1,5 +1,6 @@
 package itu.framework.backoffice.models;
 
+import itu.framework.backoffice.dtos.ReservationDTO;
 import itu.framework.backoffice.entities.Reservation;
 import itu.framework.backoffice.entities.Vehicule;
 
@@ -10,27 +11,37 @@ import java.util.List;
 
 public class TrajetCandidat {
     Vehicule vehicule;
-    List<Reservation> reservations;
+    List<ReservationDTO> reservations;
     LocalDateTime heureDepart;
     LocalDateTime heureArrivee;
     BigDecimal distanceTotale;
     List<String> ordreVisites;
 
     public Integer getTempsAttenteRestant() {
-        if(heureDepart == null || reservations.size() == 0) {
+        if (heureDepart == null || reservations.size() == 0) {
             return 0;
         }
-        Long minutesPasseesEntrePremiereReservationEtHeureDepart = Duration.between(reservations.get(0).getDateHeureArrivee(), heureDepart).toMinutes();
-        Integer minutesRestantes = reservations.get(0).getTempsAttenteMaxEffectif() - Math.toIntExact(minutesPasseesEntrePremiereReservationEtHeureDepart);
-        if(minutesRestantes > 30) {
-            System.out.println("[DEBUG TEMPS RESTANT]: minutes passess entre premier et heure dep: "+minutesPasseesEntrePremiereReservationEtHeureDepart);
-            System.out.println("[DEBUG TEMPS RESTANT]: temps attente max effectif: "+reservations.get(0).getTempsAttenteMaxEffectif());
-            System.out.println("[DEBUG TEMPS RESTANT]: minutes restantes: "+minutesRestantes);
+        Long minutesPasseesEntrePremiereReservationEtHeureDepart = Duration
+                .between(reservations.get(0).getDateHeureArrivee(), heureDepart).toMinutes();
+        Integer tempsAttenteMaxEffectif = 120; // Default
+        if (reservations.get(0).getTempsAttenteMax() != null) {
+            tempsAttenteMaxEffectif = reservations.get(0).getTempsAttenteMax();
+        }
+
+        Integer minutesRestantes = tempsAttenteMaxEffectif
+                - Math.toIntExact(minutesPasseesEntrePremiereReservationEtHeureDepart);
+        if (minutesRestantes > 30) {
+            System.out.println("[DEBUG TEMPS RESTANT]: minutes passess entre premier et heure dep: "
+                    + minutesPasseesEntrePremiereReservationEtHeureDepart);
+            System.out.println("[DEBUG TEMPS RESTANT]: temps attente max effectif: "
+                    + tempsAttenteMaxEffectif);
+            System.out.println("[DEBUG TEMPS RESTANT]: minutes restantes: " + minutesRestantes);
         }
         return minutesRestantes > 0 ? minutesRestantes : 0;
     }
 
-    public TrajetCandidat(Vehicule vehicule, List<Reservation> reservations, LocalDateTime heureDepart, LocalDateTime heureArrivee, BigDecimal distanceTotale, List<String> ordreVisites) {
+    public TrajetCandidat(Vehicule vehicule, List<ReservationDTO> reservations, LocalDateTime heureDepart,
+            LocalDateTime heureArrivee, BigDecimal distanceTotale, List<String> ordreVisites) {
         this.vehicule = vehicule;
         this.reservations = reservations;
         this.heureDepart = heureDepart;
@@ -50,11 +61,11 @@ public class TrajetCandidat {
         this.vehicule = vehicule;
     }
 
-    public List<Reservation> getReservations() {
+    public List<ReservationDTO> getReservations() {
         return reservations;
     }
 
-    public void setReservations(List<Reservation> reservations) {
+    public void setReservations(List<ReservationDTO> reservations) {
         this.reservations = reservations;
     }
 

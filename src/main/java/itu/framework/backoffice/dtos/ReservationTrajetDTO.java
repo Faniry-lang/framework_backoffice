@@ -18,6 +18,13 @@ public class ReservationTrajetDTO implements Serializable {
         // Constructeur par défaut
     }
 
+    public ReservationTrajetDTO(Reservation reservation, Integer assignedPassengerCount) {
+        this(reservation);
+        if (assignedPassengerCount != null) {
+            this.nbPassager = assignedPassengerCount;
+        }
+    }
+
     public ReservationTrajetDTO(Reservation reservation) {
         try {
             this.reservationId = reservation.getId();

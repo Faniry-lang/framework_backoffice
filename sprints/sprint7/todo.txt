@@ -1,0 +1,47 @@
+- Créer `ReservationDTO` (POJO) identique à `Reservation`.
+- Charger les réservations non assignées et convertir en `ReservationDTO` en début de `assignVehicles`.
+- Ajouter maps en mémoire : `remainingPassengers` et `originalPassengers`.
+- Modifier les usages internes pour travailler avec `ReservationDTO`.
+- Modifier `findBestVehicle` :
+  - tester `meilleurCapacite` (véhicule pouvant tout prendre)
+  - si échec : trier véhicules par `freeSeats` (fenêtre), tie-breakers = candidateCount puis carburant
+  - parcourir véhicules pour allouer une `part` = min(remaining, freeSeats)
+  - si allocation : décrémenter `ReservationDTO` original, créer `fragmentDTO` (nbPassager=part) et retourner le fragment + véhicule
+- Adapter le flux pour traiter le `fragmentDTO` comme une réservation normale.
+- Mettre à jour `tentativeCalendar` après chaque allocation partielle.
+- Avant persistance : vérifier somme fragments <= original via `savedPassengers`.
+- Dans `saveTrajet`, écrire `trajet_reservation.nbr_passager` avec la valeur du fragment et `id_reservation` = id original.
+
+
+Plan en 3 phases d’implémentation
+Phase 1: Préparation des données
+Objectif principal: mettre en place un modèle de travail en mémoire.
+
+Directive:
+
+Créer ou remplacer ReservationDTO identique à Reservation.
+Charger les réservations non assignées au début de assignVehicles.
+Convertir ces réservations en ReservationDTO.
+Initialiser les maps remainingPassengers et originalPassengers par id de réservation.
+Phase 2: Algorithme d’allocation partielle
+Objectif principal: implémenter le split intelligent des passagers.
+
+Directive:
+
+Basculer les usages internes pour travailler avec ReservationDTO.
+Modifier findBestVehicle:
+tester d’abord meilleurCapacite
+sinon trier par freeSeats, puis tie-breakers candidateCount, puis carburant
+calculer part = min(remaining, freeSeats)
+si allocation possible: décrémenter le DTO original, créer fragmentDTO (nbPassager = part), retourner fragmentDTO + véhicule
+Traiter fragmentDTO comme une réservation normale dans le flux.
+Phase 3: Cohérence et persistance
+Objectif principal: sécuriser les allocations avant écriture base.
+
+Directive:
+
+Mettre à jour tentativeCalendar après chaque allocation partielle.
+Avant persistance, vérifier avec savedPassengers que somme fragments <= original.
+Dans saveTrajet:
+écrire trajet_reservation.nbr_passager avec la valeur du fragment
+conserver id_reservation = id de la réservation d’origine

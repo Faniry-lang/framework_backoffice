@@ -1,19 +1,20 @@
 package itu.framework.backoffice.models;
 
+import itu.framework.backoffice.dtos.ReservationDTO;
 import itu.framework.backoffice.entities.Reservation;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 public class GroupeReservation {
-    List<Reservation> reservations;
+    List<ReservationDTO> reservations;
     LocalDateTime heureArriveeVehicule;
 
-    public List<Reservation> getReservations() {
+    public List<ReservationDTO> getReservations() {
         return reservations;
     }
 
-    public void setReservations(List<Reservation> reservations) {
+    public void setReservations(List<ReservationDTO> reservations) {
         this.reservations = reservations;
     }
 

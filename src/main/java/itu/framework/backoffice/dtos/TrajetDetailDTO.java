@@ -52,9 +52,11 @@ public class TrajetDetailDTO implements Serializable {
                     try {
                         Reservation reservation = (Reservation) lien.getForeignKey("id_reservation");
                         if (reservation != null) {
-                            ReservationTrajetDTO resDto = new ReservationTrajetDTO(reservation);
+                            Integer assignedCount = lien.getNbrPassager() != null ? lien.getNbrPassager()
+                                    : reservation.getNbPassager();
+                            ReservationTrajetDTO resDto = new ReservationTrajetDTO(reservation, assignedCount);
                             this.reservations.add(resDto);
-                            this.nbPassagersTotal += reservation.getNbPassager();
+                            this.nbPassagersTotal += assignedCount;
                         }
                     } catch (Exception e) {
                         // Ignorer cette réservation en cas d'erreur
@@ -198,5 +200,3 @@ public class TrajetDetailDTO implements Serializable {
         this.detailTrajetFormate = detailTrajetFormate;
     }
 }
-
-

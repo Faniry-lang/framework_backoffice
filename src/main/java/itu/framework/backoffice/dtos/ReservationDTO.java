@@ -3,13 +3,25 @@ package itu.framework.backoffice.dtos;
 import itu.framework.backoffice.helpers.DateFormatHelper;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 public class ReservationDTO implements Serializable {
+    Integer id;
     Integer nb_passager;
     String id_client;
     String nom_hotel;
+    Integer id_hotel;
     String date_reservation;
+    LocalDateTime dateHeureArrivee;
     Integer tempsAttenteMax;
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
 
     public Integer getNb_passager() {
         return nb_passager;
@@ -35,12 +47,28 @@ public class ReservationDTO implements Serializable {
         this.nom_hotel = nom_hotel;
     }
 
+    public Integer getId_hotel() {
+        return id_hotel;
+    }
+
+    public void setId_hotel(Integer id_hotel) {
+        this.id_hotel = id_hotel;
+    }
+
     public String getDate_reservation() {
         return date_reservation;
     }
 
     public void setDate_reservation(String date_reservation) {
         this.date_reservation = date_reservation;
+    }
+
+    public LocalDateTime getDateHeureArrivee() {
+        return dateHeureArrivee;
+    }
+
+    public void setDateHeureArrivee(LocalDateTime dateHeureArrivee) {
+        this.dateHeureArrivee = dateHeureArrivee;
     }
 
     public String getFormatedDate() {

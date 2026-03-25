@@ -148,16 +148,10 @@ public class AssignmentService {
 
         // Phase 1: Convert to DTO and initialize tracking maps
         List<ReservationDTO> reservationDtos = new ArrayList<>();
-        Map<Integer, Integer> remainingPassengers = new HashMap<>();
-        Map<Integer, Integer> originalPassengers = new HashMap<>();
 
         for (Reservation r : reservationsDisponibles) {
             ReservationDTO dto = r.toDto();
             reservationDtos.add(dto);
-            if (dto.getId() != null) {
-                remainingPassengers.put(dto.getId(), dto.getNb_passager());
-                originalPassengers.put(dto.getId(), dto.getNb_passager());
-            }
         }
 
         reservationsDisponibles.sort(
@@ -467,32 +461,49 @@ public class AssignmentService {
             addIntervalToCalendar(vid, start, end, occupiedToSave);
         }
 
-        // Build non-assigned list from what was REALLY persisted.
-        // This avoids inconsistencies caused by intermediate candidate mutations.
-        Map<Integer, Integer> restantsParReservation = new HashMap<>(originalPassengers);
+        List<Reservation> reservationsNonAssignees = calculateRemainingUnassignedReservations(date,
+                reservationsDisponibles);
 
-        for (Trajet trajet : trajetsCreated) {
-            List<TrajetReservation> liensSauves = TrajetReservation.findByTrajet(trajet.getId());
-            for (TrajetReservation lien : liensSauves) {
+        return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
+    }
+
+    private List<Reservation> calculateRemainingUnassignedReservations(LocalDate date,
+            List<Reservation> reservationsDisponibles) throws Exception {
+        Map<Integer, Integer> restantsParReservation = new HashMap<>();
+        for (Reservation reservation : reservationsDisponibles) {
+            if (reservation.getId() == null)
+                continue;
+            Integer nbInitial = reservation.getNbPassager() != null ? reservation.getNbPassager() : 0;
+            restantsParReservation.put(reservation.getId(), nbInitial);
+        }
+
+        List<Trajet> trajetsDuJour = Trajet.findBy("date_trajet", date, Trajet.class);
+        for (Trajet trajet : trajetsDuJour) {
+            List<TrajetReservation> liens = TrajetReservation.findByTrajet(trajet.getId());
+            for (TrajetReservation lien : liens) {
                 Integer idReservation = lien.getIdReservation();
-                Integer nbAffecte = lien.getNbrPassager() != null ? lien.getNbrPassager() : 0;
-                if (idReservation == null)
+                if (idReservation == null || !restantsParReservation.containsKey(idReservation))
                     continue;
-                Integer restant = restantsParReservation.getOrDefault(idReservation, 0);
+
+                Integer nbAffecte = lien.getNbrPassager() != null ? lien.getNbrPassager() : 0;
+                Integer restant = restantsParReservation.get(idReservation);
                 restantsParReservation.put(idReservation, Math.max(0, restant - nbAffecte));
             }
         }
 
         List<Reservation> reservationsNonAssignees = new ArrayList<>();
-        for (Reservation r : reservationsDisponibles) {
-            Integer restant = restantsParReservation.get(r.getId());
-            if (restant != null && restant > 0) {
-                r.setNbPassager(restant);
-                reservationsNonAssignees.add(r);
+        for (Reservation reservation : reservationsDisponibles) {
+            if (reservation.getId() == null)
+                continue;
+
+            Integer restant = restantsParReservation.getOrDefault(reservation.getId(), 0);
+            if (restant > 0) {
+                reservation.setNbPassager(restant);
+                reservationsNonAssignees.add(reservation);
             }
         }
 
-        return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
+        return reservationsNonAssignees;
     }
 
     private GroupeReservation findOptimalWaitingGroup(Vehicule vehicule, Map<Integer, List<Interval>> calendar,

@@ -99,7 +99,8 @@
         <main class="main-content">
             <div class="page-header">
                 <h1>Planification du ${dateSelectionnee}</h1>
-                <p>Résultat de l'assignation automatique des véhicules</p>
+                <h2>ETU03231 - ETU03173 - ETU03102</h2>
+                <p></p>
             </div>
 
             <!-- Section 1: Trajets assignés -->

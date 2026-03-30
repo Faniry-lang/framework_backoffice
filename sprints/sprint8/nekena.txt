@@ -1,0 +1,8 @@
+- prendre la liste des voitures de retours apres les assignation
+- prendre la liste des reservation non assigner
+- assigner les reservation avec ses voiture de retour ( meme contrainte )
+- verifier si la voiture est remplie
+- si oui: faire partir la voiture a l'heure d'arrivee de la voiture.
+- si non:
+    creer un nouveau regroupement a l'heure d'arrivee
+    faire un groupement avec les reservations dans la periode de temp normale

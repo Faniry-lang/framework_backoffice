@@ -604,12 +604,38 @@ public class AssignmentService {
                 continue;
             }
 
+                int passengersAssigned = countAssignedPassengers(groupeReservation.getReservations());
+                boolean vehicleIsFull = passengersAssigned >= returnVehicle.capaciteDisponible;
+
+                if (!vehicleIsFull && returnVehicle.heureRetour != null) {
+                GroupeReservation regroupementNormal = buildNormalPeriodRegroupement(returnVehicle.vehicule,
+                    returnVehicle.heureRetour,
+                    returnVehicle.capaciteDisponible,
+                    remainingDtos);
+                if (regroupementNormal != null && regroupementNormal.getReservations() != null
+                    && !regroupementNormal.getReservations().isEmpty()) {
+                    groupeReservation = regroupementNormal;
+                }
+                }
+
             TrajetCandidat candidat = optimizeRoute(returnVehicle.vehicule,
                     groupeReservation.getHeureArriveeVehicule(),
                     groupeReservation.getReservations(), null);
 
             if (candidat == null || candidat.getHeureDepart() == null || candidat.getHeureArrivee() == null) {
                 continue;
+            }
+
+            if (vehicleIsFull && returnVehicle.heureRetour != null) {
+                TripTiming forcedTiming = calculateTripTiming(returnVehicle.vehicule,
+                        returnVehicle.heureRetour,
+                        groupeReservation.getReservations(),
+                        candidat.getOrdreVisites());
+                if (forcedTiming != null) {
+                    candidat.setHeureDepart(forcedTiming.getHeureDepart());
+                    candidat.setHeureArrivee(forcedTiming.getHeureArrivee());
+                    candidat.setDistanceTotale(forcedTiming.getDistanceTotale());
+                }
             }
 
             if (!isVehicleFree(returnVehicle.vehicule.getId(), candidat.getHeureDepart(), candidat.getHeureArrivee(),
@@ -626,6 +652,88 @@ public class AssignmentService {
         }
 
         return trajetsRetour;
+    }
+
+    private GroupeReservation buildNormalPeriodRegroupement(Vehicule vehicule,
+            LocalDateTime heureRetour,
+            Integer capaciteVehicule,
+            List<ReservationDTO> remainingDtos) {
+        GroupeReservation regroupement = new GroupeReservation();
+        regroupement.setReservations(new ArrayList<>());
+        if (vehicule == null || heureRetour == null || capaciteVehicule == null || capaciteVehicule <= 0
+                || remainingDtos == null || remainingDtos.isEmpty()) {
+            return regroupement;
+        }
+
+        LocalDateTime endNormalPeriod = heureRetour.plusMinutes(Constants.Config.getDefaultWaitTime());
+
+        List<ReservationDTO> candidates = remainingDtos.stream()
+                .filter(Objects::nonNull)
+                .filter(r -> r.getDateHeureArrivee() != null)
+                .filter(r -> !r.getDateHeureArrivee().isBefore(heureRetour)
+                        && !r.getDateHeureArrivee().isAfter(endNormalPeriod))
+                .sorted(Comparator.comparingInt(AssignmentService::getPassengerPriorityScore).reversed()
+                        .thenComparing(ReservationDTO::getNb_passager, Comparator.nullsLast(Comparator.reverseOrder()))
+                        .thenComparing(ReservationDTO::getDateHeureArrivee, Comparator.nullsLast(Comparator.naturalOrder())))
+                .collect(Collectors.toList());
+
+        if (candidates.isEmpty()) {
+            return regroupement;
+        }
+
+        List<ReservationDTO> grouped = new ArrayList<>();
+        int occupiedSeats = 0;
+
+        for (ReservationDTO candidate : candidates) {
+            if (candidate.getNb_passager() == null || candidate.getNb_passager() <= 0) {
+                continue;
+            }
+
+            int remainingSeats = capaciteVehicule - occupiedSeats;
+            if (remainingSeats <= 0) {
+                break;
+            }
+
+            if (candidate.getNb_passager() <= remainingSeats) {
+                grouped.add(copyReservationDto(candidate));
+                occupiedSeats += candidate.getNb_passager();
+            } else {
+                ReservationDTO fragment = copyReservationDto(candidate);
+                fragment.setNb_passager(remainingSeats);
+                grouped.add(fragment);
+                occupiedSeats += remainingSeats;
+                break;
+            }
+        }
+
+        if (grouped.isEmpty()) {
+            return regroupement;
+        }
+
+        LocalDateTime departRegroupement = heureRetour;
+        for (ReservationDTO reservation : grouped) {
+            if (reservation.getDateHeureArrivee() != null && reservation.getDateHeureArrivee().isAfter(departRegroupement)) {
+                departRegroupement = reservation.getDateHeureArrivee();
+            }
+        }
+
+        regroupement.setReservations(grouped);
+        regroupement.setHeureArriveeVehicule(departRegroupement);
+        return regroupement;
+    }
+
+    private int countAssignedPassengers(List<ReservationDTO> reservations) {
+        if (reservations == null || reservations.isEmpty()) {
+            return 0;
+        }
+
+        int total = 0;
+        for (ReservationDTO reservation : reservations) {
+            if (reservation != null && reservation.getNb_passager() != null) {
+                total += reservation.getNb_passager();
+            }
+        }
+        return total;
     }
 
     private List<ReservationDTO> buildRemainingReservationDtos(Map<Integer, Integer> remainingPassengersByReservation,

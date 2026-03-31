@@ -26,6 +26,29 @@ public class AssignmentService {
         }
     }
 
+    private static class ReturnVehicleAvailability {
+        private final Vehicule vehicule;
+        private final LocalDateTime heureRetour;
+        private final Integer capaciteDisponible;
+
+        ReturnVehicleAvailability(Vehicule vehicule, LocalDateTime heureRetour, Integer capaciteDisponible) {
+            this.vehicule = vehicule;
+            this.heureRetour = heureRetour;
+            this.capaciteDisponible = capaciteDisponible;
+        }
+    }
+
+    private static class ReturnAssignmentPreparation {
+        private final List<ReturnVehicleAvailability> voituresRetour;
+        private final List<Reservation> reservationsNonAssignees;
+
+        ReturnAssignmentPreparation(List<ReturnVehicleAvailability> voituresRetour,
+                List<Reservation> reservationsNonAssignees) {
+            this.voituresRetour = voituresRetour;
+            this.reservationsNonAssignees = reservationsNonAssignees;
+        }
+    }
+
     private static boolean overlaps(LocalDateTime aStart, LocalDateTime aEnd, LocalDateTime bStart,
             LocalDateTime bEnd) {
         if (aStart == null || aEnd == null || bStart == null || bEnd == null)
@@ -464,7 +487,55 @@ public class AssignmentService {
         List<Reservation> reservationsNonAssignees = calculateRemainingUnassignedReservations(date,
                 reservationsDisponibles);
 
+        ReturnAssignmentPreparation preparationEtape1 = prepareReturnAssignmentStep1(date, reservationsNonAssignees);
+        System.out.println("[STEP1] voitures retour=" + preparationEtape1.voituresRetour.size()
+                + " reservations non assignees=" + preparationEtape1.reservationsNonAssignees.size());
+
         return new AssignmentResult(trajetsCreated, reservationsNonAssignees);
+    }
+
+    private ReturnAssignmentPreparation prepareReturnAssignmentStep1(LocalDate date,
+            List<Reservation> reservationsNonAssignees) throws Exception {
+        List<ReturnVehicleAvailability> voituresRetour = findReturnVehiclesAfterAssignments(date);
+        List<Reservation> reservations = reservationsNonAssignees != null ? reservationsNonAssignees : new ArrayList<>();
+        return new ReturnAssignmentPreparation(voituresRetour, reservations);
+    }
+
+    private List<ReturnVehicleAvailability> findReturnVehiclesAfterAssignments(LocalDate date) throws Exception {
+        List<Trajet> trajetsDuJour = Trajet.findByDate(date);
+        Map<Integer, LocalDateTime> derniereArriveeParVehicule = new HashMap<>();
+
+        for (Trajet trajet : trajetsDuJour) {
+            if (trajet == null || trajet.getIdVehicule() == null || trajet.getHeureArrivee() == null) {
+                continue;
+            }
+            LocalDateTime arrivee = trajet.getHeureArrivee();
+            LocalDateTime current = derniereArriveeParVehicule.get(trajet.getIdVehicule());
+            if (current == null || arrivee.isAfter(current)) {
+                derniereArriveeParVehicule.put(trajet.getIdVehicule(), arrivee);
+            }
+        }
+
+        if (derniereArriveeParVehicule.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        Map<Integer, Vehicule> vehiculesParId = Vehicule.findAll(Vehicule.class)
+                .stream()
+                .collect(Collectors.toMap(Vehicule::getId, v -> v));
+
+        List<ReturnVehicleAvailability> voituresRetour = new ArrayList<>();
+        for (Map.Entry<Integer, LocalDateTime> entry : derniereArriveeParVehicule.entrySet()) {
+            Vehicule vehicule = vehiculesParId.get(entry.getKey());
+            if (vehicule == null) {
+                continue;
+            }
+            Integer capaciteDisponible = vehicule.getNbrPlace() != null ? vehicule.getNbrPlace() : 0;
+            voituresRetour.add(new ReturnVehicleAvailability(vehicule, entry.getValue(), capaciteDisponible));
+        }
+
+        voituresRetour.sort(Comparator.comparing(v -> v.heureRetour));
+        return voituresRetour;
     }
 
     private List<Reservation> calculateRemainingUnassignedReservations(LocalDate date,

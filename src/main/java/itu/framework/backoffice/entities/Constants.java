@@ -191,6 +191,11 @@ public class Constants extends BaseEntity {
             return getIntValue("HOTEL_STOP_TIME", 5);
         }
 
+        // Paramètre: horizon (minutes) pour rechercher un créneau futur proche
+        public static Integer getNextSlotHorizon() {
+            return getIntValue("NEXT_SLOT_HORIZON", 60);
+        }
+
         // Priorités carburant
         public static Integer getFuelPriority(String fuelType) {
             switch (fuelType) {

@@ -100,6 +100,131 @@ public class AssignmentService {
         calendar.put(vehiculeId, merged);
     }
 
+    private static void addIntervalToCalendarWithPriority(Integer vehiculeId, LocalDateTime start, LocalDateTime end,
+            Map<Integer, List<Interval>> calendar) {
+        if (vehiculeId == null || start == null || end == null)
+            return;
+        List<Interval> list = calendar.computeIfAbsent(vehiculeId, k -> new ArrayList<>());
+        List<Interval> toKeep = new ArrayList<>();
+        for (Interval iv : list) {
+            if (overlaps(start, end, iv.start, iv.end)) {
+                System.out.println("[PRIORITY] Removing overlapping interval " + iv.start + "->" + iv.end
+                        + " for veh=" + vehiculeId + " because priority interval " + start + "->" + end);
+                continue;
+            }
+            toKeep.add(iv);
+        }
+        toKeep.add(new Interval(start, end));
+        toKeep.sort(Comparator.comparing(i -> i.start));
+        List<Interval> merged = new ArrayList<>();
+        for (Interval iv : toKeep) {
+            if (merged.isEmpty()) {
+                merged.add(iv);
+            } else {
+                Interval last = merged.get(merged.size() - 1);
+                if (!iv.start.isAfter(last.end)) {
+                    if (iv.end.isAfter(last.end))
+                        last.end = iv.end;
+                } else {
+                    merged.add(iv);
+                }
+            }
+        }
+        calendar.put(vehiculeId, merged);
+    }
+
+    private static class ReturnGroupResult {
+        List<ReservationDTO> reservations;
+        LocalDateTime heureArriveeVehicule;
+
+        ReturnGroupResult(List<ReservationDTO> reservations, LocalDateTime heureArriveeVehicule) {
+            this.reservations = reservations;
+            this.heureArriveeVehicule = heureArriveeVehicule;
+        }
+    }
+
+    private GroupeReservation buildReturnGroupForVehicle(Vehicule vehicule, LocalDateTime heureRetour,
+            Integer capaciteVehicule, List<ReservationDTO> remainingDtos) {
+        GroupeReservation gp = new GroupeReservation();
+        gp.setReservations(new ArrayList<>());
+        if (vehicule == null || heureRetour == null || capaciteVehicule == null || capaciteVehicule <= 0
+                || remainingDtos == null || remainingDtos.isEmpty()) {
+            return gp;
+        }
+
+        List<ReservationDTO> expired = new ArrayList<>();
+        List<ReservationDTO> sameTime = new ArrayList<>();
+        for (ReservationDTO r : remainingDtos) {
+            if (r == null || r.getDateHeureArrivee() == null || r.getNb_passager() == null)
+                continue;
+            if (r.getDateHeureArrivee().isBefore(heureRetour))
+                expired.add(r);
+            else if (r.getDateHeureArrivee().isEqual(heureRetour))
+                sameTime.add(r);
+        }
+
+        Comparator<ReservationDTO> byNbDescThenDate = Comparator
+                .comparingInt(AssignmentService::getPassengerPriorityScore).reversed()
+                .thenComparing(ReservationDTO::getNb_passager, Comparator.nullsLast(Comparator.reverseOrder()))
+                .thenComparing(ReservationDTO::getDateHeureArrivee, Comparator.nullsLast(Comparator.naturalOrder()));
+
+        expired.sort(byNbDescThenDate);
+        sameTime.sort(byNbDescThenDate);
+
+        List<ReservationDTO> grouped = new ArrayList<>();
+        int occupied = 0;
+
+        for (ReservationDTO r : expired) {
+            if (occupied >= capaciteVehicule)
+                break;
+            int remainingCapacity = capaciteVehicule - occupied;
+            if (r.getNb_passager() <= remainingCapacity) {
+                grouped.add(copyReservationDto(r));
+                occupied += r.getNb_passager();
+            } else {
+                ReservationDTO frag = copyReservationDto(r);
+                frag.setNb_passager(remainingCapacity);
+                grouped.add(frag);
+                occupied += remainingCapacity;
+                break;
+            }
+        }
+
+        if (occupied < capaciteVehicule) {
+            for (ReservationDTO r : sameTime) {
+                if (occupied >= capaciteVehicule)
+                    break;
+                int remainingCapacity = capaciteVehicule - occupied;
+                if (r.getNb_passager() <= remainingCapacity) {
+                    grouped.add(copyReservationDto(r));
+                    occupied += r.getNb_passager();
+                } else {
+                    ReservationDTO frag = copyReservationDto(r);
+                    frag.setNb_passager(remainingCapacity);
+                    grouped.add(frag);
+                    occupied += remainingCapacity;
+                    break;
+                }
+            }
+        }
+
+        if (grouped.isEmpty())
+            return gp;
+
+        LocalDateTime depart = heureRetour;
+        LocalDateTime latest = depart;
+        for (ReservationDTO r : grouped) {
+            if (r.getDateHeureArrivee() != null && r.getDateHeureArrivee().isAfter(latest))
+                latest = r.getDateHeureArrivee();
+        }
+        if (latest.isAfter(depart))
+            depart = latest;
+
+        gp.setReservations(grouped);
+        gp.setHeureArriveeVehicule(depart);
+        return gp;
+    }
+
     private static int getPassengerPriorityScoreForEntity(Reservation reservation) {
         Integer nbPassager = reservation.getNbPassager();
         if (nbPassager == null)
@@ -325,7 +450,8 @@ public class AssignmentService {
                         // outer loop.
                         // Outer loop checks if empty. It is not.
                         // Outer loop takes index 0. It is the modified DTO.
-                        // Perfect.
+                        // So next iteration of "while (!remainingReservations.isEmpty())" will pick it
+                        // up again with reduced passengers.
                     } else {
                         // Undo split ? No, just fail this vehicle
                         premiereReservation.setNb_passager(premiereReservation.getNb_passager() + toAllocate);
@@ -491,7 +617,7 @@ public class AssignmentService {
         System.out.println("[STEP1] voitures retour=" + preparationEtape1.voituresRetour.size()
                 + " reservations non assignees=" + preparationEtape1.reservationsNonAssignees.size());
 
-        List<Trajet> trajetsRetour = assignRemainingReservationsToReturnVehicles(date, preparationEtape1, occupiedToSave);
+        List<Trajet> trajetsRetour = assignRemainingReservationsToReturnVehicles(date, preparationEtape1, occupiedToSave, candidats);
         trajetsCreated.addAll(trajetsRetour);
         System.out.println("[STEP2] trajets retour crees=" + trajetsRetour.size());
 
@@ -546,11 +672,12 @@ public class AssignmentService {
 
     private List<Trajet> assignRemainingReservationsToReturnVehicles(LocalDate date,
             ReturnAssignmentPreparation preparation,
-            Map<Integer, List<Interval>> occupiedCalendar) throws Exception {
-        List<Trajet> trajetsRetour = new ArrayList<>();
-        if (preparation == null || preparation.voituresRetour == null || preparation.voituresRetour.isEmpty()) {
-            return trajetsRetour;
-        }
+            Map<Integer, List<Interval>> occupiedCalendar,
+            List<TrajetCandidat> existingCandidats) throws Exception {
+         List<Trajet> trajetsRetour = new ArrayList<>();
+         if (preparation == null || preparation.voituresRetour == null || preparation.voituresRetour.isEmpty()) {
+             return trajetsRetour;
+         }
 
         Map<Integer, Reservation> reservationsById = new HashMap<>();
         Map<Integer, Integer> remainingPassengersByReservation = new HashMap<>();
@@ -597,40 +724,44 @@ public class AssignmentService {
                             .thenComparing(ReservationDTO::getDateHeureArrivee,
                                     Comparator.nullsLast(Comparator.naturalOrder())));
 
-            GroupeReservation groupeReservation = findOptimalWaitingGroup(returnVehicle.vehicule, occupiedCalendar,
-                    remainingDtos);
+            LocalDateTime heureRetour = returnVehicle.heureRetour;
+            LocalDateTime endNormalPeriod = heureRetour != null
+                    ? heureRetour.plusMinutes(Constants.Config.getDefaultWaitTime())
+                    : null;
+
+            GroupeReservation groupeReservation = buildReturnGroupForVehicle(returnVehicle.vehicule, heureRetour,
+                    returnVehicle.capaciteDisponible, remainingDtos);
+
             if (groupeReservation == null || groupeReservation.getReservations() == null
                     || groupeReservation.getReservations().isEmpty()) {
+                if (heureRetour != null && endNormalPeriod != null) {
+                    addIntervalToCalendarWithPriority(returnVehicle.vehicule.getId(), heureRetour, endNormalPeriod,
+                            occupiedCalendar);
+                    System.out.println("[RETURN] aucun candidat pour veh=" + returnVehicle.vehicule.getId()
+                            + " -> ajout intervalle prioritaire [" + heureRetour + " - " + endNormalPeriod + "]");
+                }
                 continue;
             }
 
-                int passengersAssigned = countAssignedPassengers(groupeReservation.getReservations());
-                boolean vehicleIsFull = passengersAssigned >= returnVehicle.capaciteDisponible;
+            int passengersAssigned = countAssignedPassengers(groupeReservation.getReservations());
+            boolean vehicleIsFull = passengersAssigned >= (returnVehicle.capaciteDisponible != null
+                    ? returnVehicle.capaciteDisponible : 0);
 
-                if (!vehicleIsFull && returnVehicle.heureRetour != null) {
-                GroupeReservation regroupementNormal = buildNormalPeriodRegroupement(returnVehicle.vehicule,
-                    returnVehicle.heureRetour,
-                    returnVehicle.capaciteDisponible,
-                    remainingDtos);
-                if (regroupementNormal != null && regroupementNormal.getReservations() != null
-                    && !regroupementNormal.getReservations().isEmpty()) {
-                    groupeReservation = regroupementNormal;
-                }
-                }
+            Lieux aeroport = Lieux.findAeroport();
+            if (aeroport == null) {
+                throw new Exception("Aucune données d'aeroport dans la base de données");
+            }
 
             TrajetCandidat candidat = optimizeRoute(returnVehicle.vehicule,
-                    groupeReservation.getHeureArriveeVehicule(),
-                    groupeReservation.getReservations(), null);
+                    groupeReservation.getHeureArriveeVehicule(), groupeReservation.getReservations(), aeroport);
 
             if (candidat == null || candidat.getHeureDepart() == null || candidat.getHeureArrivee() == null) {
                 continue;
             }
 
-            if (vehicleIsFull && returnVehicle.heureRetour != null) {
-                TripTiming forcedTiming = calculateTripTiming(returnVehicle.vehicule,
-                        returnVehicle.heureRetour,
-                        groupeReservation.getReservations(),
-                        candidat.getOrdreVisites());
+            if (vehicleIsFull && heureRetour != null) {
+                TripTiming forcedTiming = calculateTripTiming(returnVehicle.vehicule, heureRetour,
+                        groupeReservation.getReservations(), candidat.getOrdreVisites());
                 if (forcedTiming != null) {
                     candidat.setHeureDepart(forcedTiming.getHeureDepart());
                     candidat.setHeureArrivee(forcedTiming.getHeureArrivee());
@@ -640,89 +771,31 @@ public class AssignmentService {
 
             if (!isVehicleFree(returnVehicle.vehicule.getId(), candidat.getHeureDepart(), candidat.getHeureArrivee(),
                     occupiedCalendar)) {
+                System.out.println("[RETURN] overlap detected skip veh=" + returnVehicle.vehicule.getId() + " start="
+                        + candidat.getHeureDepart() + " end=" + candidat.getHeureArrivee());
                 continue;
             }
 
             Trajet trajet = saveTrajet(candidat, date);
             trajetsRetour.add(trajet);
-            addIntervalToCalendar(returnVehicle.vehicule.getId(), candidat.getHeureDepart(), candidat.getHeureArrivee(),
-                    occupiedCalendar);
+
+            addIntervalToCalendarWithPriority(returnVehicle.vehicule.getId(), candidat.getHeureDepart(),
+                    candidat.getHeureArrivee(), occupiedCalendar);
+
+            System.out.println("[RETURN] saved trajet retour veh=" + returnVehicle.vehicule.getId() + " depart="
+                    + candidat.getHeureDepart() + " arrivee=" + candidat.getHeureArrivee() + " pax="
+                    + passengersAssigned + " full=" + vehicleIsFull);
 
             decrementRemainingPassengers(remainingPassengersByReservation, candidat.getReservations());
+
+            // Si véhicule rempli il part immédiatement (heure départ deja forcée)
+            // Dans tous les cas on crée intervalle (fait ci-dessus) et on poursuit
         }
 
         return trajetsRetour;
     }
 
-    private GroupeReservation buildNormalPeriodRegroupement(Vehicule vehicule,
-            LocalDateTime heureRetour,
-            Integer capaciteVehicule,
-            List<ReservationDTO> remainingDtos) {
-        GroupeReservation regroupement = new GroupeReservation();
-        regroupement.setReservations(new ArrayList<>());
-        if (vehicule == null || heureRetour == null || capaciteVehicule == null || capaciteVehicule <= 0
-                || remainingDtos == null || remainingDtos.isEmpty()) {
-            return regroupement;
-        }
-
-        LocalDateTime endNormalPeriod = heureRetour.plusMinutes(Constants.Config.getDefaultWaitTime());
-
-        List<ReservationDTO> candidates = remainingDtos.stream()
-                .filter(Objects::nonNull)
-                .filter(r -> r.getDateHeureArrivee() != null)
-                .filter(r -> !r.getDateHeureArrivee().isBefore(heureRetour)
-                        && !r.getDateHeureArrivee().isAfter(endNormalPeriod))
-                .sorted(Comparator.comparingInt(AssignmentService::getPassengerPriorityScore).reversed()
-                        .thenComparing(ReservationDTO::getNb_passager, Comparator.nullsLast(Comparator.reverseOrder()))
-                        .thenComparing(ReservationDTO::getDateHeureArrivee, Comparator.nullsLast(Comparator.naturalOrder())))
-                .collect(Collectors.toList());
-
-        if (candidates.isEmpty()) {
-            return regroupement;
-        }
-
-        List<ReservationDTO> grouped = new ArrayList<>();
-        int occupiedSeats = 0;
-
-        for (ReservationDTO candidate : candidates) {
-            if (candidate.getNb_passager() == null || candidate.getNb_passager() <= 0) {
-                continue;
-            }
-
-            int remainingSeats = capaciteVehicule - occupiedSeats;
-            if (remainingSeats <= 0) {
-                break;
-            }
-
-            if (candidate.getNb_passager() <= remainingSeats) {
-                grouped.add(copyReservationDto(candidate));
-                occupiedSeats += candidate.getNb_passager();
-            } else {
-                ReservationDTO fragment = copyReservationDto(candidate);
-                fragment.setNb_passager(remainingSeats);
-                grouped.add(fragment);
-                occupiedSeats += remainingSeats;
-                break;
-            }
-        }
-
-        if (grouped.isEmpty()) {
-            return regroupement;
-        }
-
-        LocalDateTime departRegroupement = heureRetour;
-        for (ReservationDTO reservation : grouped) {
-            if (reservation.getDateHeureArrivee() != null && reservation.getDateHeureArrivee().isAfter(departRegroupement)) {
-                departRegroupement = reservation.getDateHeureArrivee();
-            }
-        }
-
-        regroupement.setReservations(grouped);
-        regroupement.setHeureArriveeVehicule(departRegroupement);
-        return regroupement;
-    }
-
-    private int countAssignedPassengers(List<ReservationDTO> reservations) {
+    private static int countAssignedPassengers(List<ReservationDTO> reservations) {
         if (reservations == null || reservations.isEmpty()) {
             return 0;
         }
@@ -1036,7 +1109,6 @@ public class AssignmentService {
                     // However, the caller expects a valid group.
                     // The 'candidates' list comes from 'disponibles', which is passed from
                     // 'findOptimalWaitingGroup'.
-                    // 'findOptimalWaitingGroup' gets 'disponiblesPourTraitement'.
                     // If we modify 'disponibles', we corrupt the state for other 'departCandidat'
                     // iterations.
 
@@ -1251,16 +1323,8 @@ public class AssignmentService {
         }
 
         // 3. If no vehicle can take ALL passengers, we switch to SPLIT strategy.
-        // Sort vehicles by Free Seats (DESC), then candidate count (ASC), then Fuel (D
-        // preferred).
-        // Since we are inside findBestVehicle, we return the BEST one to trigger
-        // allocation logic in main loop.
-
-        // Actually, we should filter out vehicles that are totally full?
-        // Wait, 'disponibles' list implies they are available vehicles in general.
-        // We know their capacity NbrPlace.
-        // We heavily rely on isVehicleFreeOverall in main loop.
-        // Here we just pick a candidate vehicle.
+        // Sort vehicles to find the best candidate for partial allocation.
+        // Criteria: Free Seats (DESC), then candidate count (ASC), then Fuel (D preferred).
 
         // Sort disponibles by NbrPlace DESC
         List<Vehicule> sortedCandidates = new ArrayList<>(disponibles);
@@ -1560,3 +1624,4 @@ public class AssignmentService {
         }
     }
 }
+
